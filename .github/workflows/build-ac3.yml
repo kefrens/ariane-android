@@ -37,16 +37,18 @@ jobs:
         run: app/src/main/jni/ac3enc/build-ffmpeg-ac3.sh
 
       - name: Build APK
-        run: ./gradlew --no-daemon assembleNonRoot_gameDebug
+        run: ./gradlew --no-daemon assembleNonRoot_gameAc3
 
       - name: Check that the AC-3 library was packaged
         run: |
-          for apk in app/build/outputs/apk/nonRoot_game/debug/*.apk; do
+          for apk in app/build/outputs/apk/nonRoot_game/ac3/*.apk; do
             echo "$apk:"; unzip -l "$apk" | grep -E 'libmoonlight-(ac3|core)\.so' || true
           done
-          unzip -l app/build/outputs/apk/nonRoot_game/debug/*arm64-v8a*.apk | grep -q libmoonlight-ac3.so
+          unzip -l app/build/outputs/apk/nonRoot_game/ac3/*arm64-v8a*.apk | grep -q libmoonlight-ac3.so
+          APKSIGNER=$(ls "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -n1)
+          "$APKSIGNER" verify --print-certs app/build/outputs/apk/nonRoot_game/ac3/*arm64-v8a*.apk
 
       - uses: actions/upload-artifact@v4
         with:
-          name: artemis-ac3-debug-apks
-          path: app/build/outputs/apk/nonRoot_game/debug/*.apk
+          name: artemis-ac3-apks
+          path: app/build/outputs/apk/nonRoot_game/ac3/*.apk
