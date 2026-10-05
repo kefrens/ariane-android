@@ -1,0 +1,52 @@
+name: Build APK (with AC-3 passthrough)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ "ac3-passthrough", "moonlight-noir" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      NDK_VERSION: 27.0.12077973
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Install NDK
+        run: |
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "ndk;${NDK_VERSION}" > /dev/null
+          echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/${NDK_VERSION}" >> "$GITHUB_ENV"
+
+      - name: Cache FFmpeg AC-3 libraries
+        id: ffmpeg-cache
+        uses: actions/cache@v4
+        with:
+          path: app/src/main/jni/ac3enc/ffmpeg
+          key: ffmpeg-ac3-${{ env.NDK_VERSION }}-${{ hashFiles('app/src/main/jni/ac3enc/build-ffmpeg-ac3.sh') }}
+
+      - name: Build FFmpeg AC-3 encoder
+        if: steps.ffmpeg-cache.outputs.cache-hit != 'true'
+        run: app/src/main/jni/ac3enc/build-ffmpeg-ac3.sh
+
+      - name: Build APK
+        run: ./gradlew --no-daemon assembleNonRoot_gameDebug
+
+      - name: Check that the AC-3 library was packaged
+        run: |
+          for apk in app/build/outputs/apk/nonRoot_game/debug/*.apk; do
+            echo "$apk:"; unzip -l "$apk" | grep -E 'libmoonlight-(ac3|core)\.so' || true
+          done
+          unzip -l app/build/outputs/apk/nonRoot_game/debug/*arm64-v8a*.apk | grep -q libmoonlight-ac3.so
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: artemis-ac3-debug-apks
+          path: app/build/outputs/apk/nonRoot_game/debug/*.apk

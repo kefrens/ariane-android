@@ -6,6 +6,7 @@ import android.content.pm.PackageManager;
 import android.os.Build;
 import android.view.Display;
 
+import com.limelight.binding.audio.Ac3Encoder;
 import com.limelight.nvstream.jni.MoonBridge;
 import com.limelight.profiles.ProfilesManager;
 
@@ -87,6 +88,7 @@ public class PreferenceConfiguration {
     private static final String LOW_LATENCY_FRAME_BALANCE_PREF_STRING = "pref_low_latency_frame_balance";
     private static final String ABSOLUTE_MOUSE_MODE_PREF_STRING = "checkbox_absolute_mouse_mode";
     private static final String ENABLE_AUDIO_FX_PREF_STRING = "checkbox_enable_audiofx";
+    private static final String AC3_PASSTHROUGH_PREF_STRING = "checkbox_ac3_passthrough";
     private static final String REDUCE_REFRESH_RATE_PREF_STRING = "checkbox_reduce_refresh_rate";
     private static final String FULL_RANGE_PREF_STRING = "checkbox_full_range";
     private static final String GAMEPAD_TOUCHPAD_AS_MOUSE_PREF_STRING = "checkbox_gamepad_touchpad_as_mouse";
@@ -183,6 +185,7 @@ public class PreferenceConfiguration {
     private static final String DEFAULT_FRAME_PACING = "latency";
     private static final boolean DEFAULT_ABSOLUTE_MOUSE_MODE = false;
     private static final boolean DEFAULT_ENABLE_AUDIO_FX = false;
+    private static final boolean DEFAULT_AC3_PASSTHROUGH = false;
     private static final boolean DEFAULT_REDUCE_REFRESH_RATE = false;
     private static final boolean DEFAULT_FULL_RANGE = false;
     private static final boolean DEFAULT_GAMEPAD_TOUCHPAD_AS_MOUSE = false;
@@ -371,6 +374,7 @@ public class PreferenceConfiguration {
     public int framePacing;
     public boolean absoluteMouseMode;
     public boolean enableAudioFx;
+    public boolean ac3Passthrough;
     public boolean reduceRefreshRate;
     public boolean fullRange;
     public boolean gamepadMotionSensors;
@@ -854,6 +858,14 @@ private static int getFramePacingValue(Context context) {
         }
         else /* if (audioConfig.equals("2")) */ {
             config.audioConfiguration = MoonBridge.AUDIO_CONFIGURATION_STEREO;
+        }
+
+        config.ac3Passthrough = prefs.getBoolean(AC3_PASSTHROUGH_PREF_STRING, DEFAULT_AC3_PASSTHROUGH) &&
+                Ac3Encoder.isAvailable();
+        if (config.ac3Passthrough &&
+                config.audioConfiguration.equals(MoonBridge.AUDIO_CONFIGURATION_71_SURROUND)) {
+            // AC-3 tops out at 5.1, so have the host mix to 5.1 rather than dropping channels here
+            config.audioConfiguration = MoonBridge.AUDIO_CONFIGURATION_51_SURROUND;
         }
 
         config.videoScaleMode = getVideoScaleMode(context);

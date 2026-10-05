@@ -46,3 +46,5 @@
 # MPAndroidChart
 -keep class com.github.mikephil.charting.** { *; }
 -dontwarn com.github.mikephil.charting.**
+# AC-3 passthrough encoder (JNI)
+-keep class com.limelight.binding.audio.Ac3Encoder { native <methods>; }

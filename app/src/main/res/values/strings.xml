@@ -218,6 +218,8 @@
     <string name="summary_audio_config_list">Enable 5.1 or 7.1 surround sound for home-theater systems</string>
     <string name="title_checkbox_enable_audiofx">Enable system equalizer support</string>
     <string name="summary_checkbox_enable_audiofx">Allows audio effects to function while streaming, but may increase audio latency</string>
+    <string name="title_checkbox_ac3_passthrough">Send surround as Dolby Digital</string>
+    <string name="summary_checkbox_ac3_passthrough">Encodes 5.1 audio to Dolby Digital (AC-3) and passes it through over HDMI. Use this if your TV or soundbar only receives multichannel audio as Dolby or DTS. Requests 5.1 instead of 7.1 and adds some audio latency.</string>
 
     <string name="category_gamepad_settings">Gamepad Settings</string>
     <string name="title_checkbox_multi_controller">Automatic gamepad presence detection</string>
