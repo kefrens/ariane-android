@@ -35,14 +35,15 @@ Java_com_limelight_binding_audio_PassthroughEncoder_nativeIsSupported(JNIEnv* en
 
 JNIEXPORT jlong JNICALL
 Java_com_limelight_binding_audio_PassthroughEncoder_nativeCreate(JNIEnv* env, jclass clazz, jint codec,
-                                                                 jint sampleRate, jint channels, jint bitrate) {
+                                                                 jint sampleRate, jint channels, jint bitrate,
+                                                                 jboolean iec61937) {
     char err[256] = "";
     JniPtenc* j = calloc(1, sizeof(*j));
     if (j == NULL) {
         return 0;
     }
 
-    j->enc = ptenc_create((PtencCodec)codec, sampleRate, channels, bitrate, err, sizeof(err));
+    j->enc = ptenc_create((PtencCodec)codec, sampleRate, channels, bitrate, iec61937 ? 1 : 0, err, sizeof(err));
     if (j->enc == NULL) {
         __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, "Failed to create encoder %d: %s", codec, err);
         free(j);
@@ -51,9 +52,9 @@ Java_com_limelight_binding_audio_PassthroughEncoder_nativeCreate(JNIEnv* env, jc
     j->channels = channels;
 
     __android_log_print(ANDROID_LOG_INFO, LOG_TAG,
-                        "Encoder %d ready: %d Hz, %d ch, frame %d, write %d samples, codec delay %d",
+                        "Encoder %d ready: %d Hz, %d ch, frame %d, write %d samples, codec delay %d%s",
                         codec, sampleRate, channels, ptenc_frame_size(j->enc),
-                        ptenc_write_size(j->enc), ptenc_codec_delay(j->enc));
+                        ptenc_write_size(j->enc), ptenc_codec_delay(j->enc), iec61937 ? ", IEC 61937" : "");
     return (jlong)(intptr_t)j;
 }
 

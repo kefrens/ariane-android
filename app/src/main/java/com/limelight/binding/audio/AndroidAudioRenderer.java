@@ -38,6 +38,7 @@ public class AndroidAudioRenderer implements AudioRenderer {
     // (e.g. HDMI/eARC renegotiation makes writes fail with ERROR_DEAD_OBJECT)
     private AudioFormat passthroughFormat;
     private AudioAttributes passthroughAttributes;
+    private boolean passthroughIec61937;
     private int pcmChannelConfig;
     private boolean pcmLowLatency;
     private long lastRecreateTime;
@@ -179,6 +180,11 @@ public class AndroidAudioRenderer implements AudioRenderer {
         return chain;
     }
 
+    // Samples per frame for the codecs we can wrap in IEC 61937 bursts
+    private static int getIecFrameSamples(Codec codec) {
+        return codec == Codec.AC3 ? 1536 : 512;
+    }
+
     // Tries to set up a passthrough AudioTrack fed by one of our encoders.
     // Returns false (leaving no track or encoder behind) if that isn't possible,
     // in which case the caller falls back to PCM.
@@ -195,72 +201,102 @@ public class AndroidAudioRenderer implements AudioRenderer {
                 .setContentType(AudioAttributes.CONTENT_TYPE_MOVIE)
                 .build();
 
-        // Some HALs only accept compressed formats declared as stereo
-        int[] channelMasks = { AudioFormat.CHANNEL_OUT_5POINT1, AudioFormat.CHANNEL_OUT_STEREO };
-
         for (Codec codec : getFallbackChain(passthroughCodec)) {
-            int encoding = getEncoding(codec);
-            if (encoding < 0 || !PassthroughEncoder.isSupported(codec)) {
-                LimeLog.info("Passthrough: " + codec.displayName + " not available in this build/OS");
+            if (!PassthroughEncoder.isSupported(codec)) {
+                LimeLog.info("Passthrough: " + codec.displayName + " not available in this build");
                 continue;
             }
 
-            for (int channelMask : channelMasks) {
-                AudioFormat format = new AudioFormat.Builder()
-                        .setEncoding(encoding)
-                        .setSampleRate(sampleRate)
-                        .setChannelMask(channelMask)
-                        .build();
-
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q &&
-                        !AudioTrack.isDirectPlaybackSupported(format, attributes)) {
-                    LimeLog.info(String.format("Passthrough: %s direct playback not supported with channel mask 0x%X",
-                            codec.displayName, channelMask));
-                    continue;
+            // Preferred: wrap frames in IEC 61937 bursts ourselves and write them
+            // as 48 kHz 16-bit stereo. Every burst lasts exactly one frame, so the
+            // framework paces the stream like PCM. With plain ENCODING_AC3/DTS some
+            // HALs drain the bitstream faster than real time and underrun constantly.
+            if (codec != Codec.TRUEHD && Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                if (tryPassthroughTrack(audioConfiguration, sampleRate, attributes, codec, true,
+                        AudioFormat.ENCODING_IEC61937, AudioFormat.CHANNEL_OUT_STEREO,
+                        getIecFrameSamples(codec) * 4)) {
+                    return true;
                 }
+            }
 
-                // AudioFlinger won't start a streaming track until its buffer is full,
-                // so the buffer size is effectively our output latency. A buffer smaller
-                // than what the HAL consumes per period underruns constantly, though.
-                // Try the requested size first, then something larger.
-                int unitBytes = getWriteUnitBytes(codec);
-                int minBufferSize = AudioTrack.getMinBufferSize(sampleRate, channelMask, encoding);
-                int requested = bufferFrames > 0 ?
-                        unitBytes * bufferFrames : Math.max(minBufferSize, unitBytes * 2);
-                int[] bufferSizes = { requested, Math.max(minBufferSize, requested + unitBytes * 2) };
+            int encoding = getEncoding(codec);
+            if (encoding < 0) {
+                LimeLog.info("Passthrough: " + codec.displayName + " not supported on this Android version");
+                continue;
+            }
 
-                for (int bufferSize : bufferSizes) {
-                    try {
-                        track = createPassthroughAudioTrack(format, attributes, bufferSize);
-                        if (track.getState() != AudioTrack.STATE_INITIALIZED) {
-                            throw new IllegalStateException("AudioTrack not initialized");
-                        }
-
-                        encoder = new PassthroughEncoder(codec, sampleRate, audioConfiguration.channelCount, 0);
-                        track.play();
-                        trackBufferBytes = bufferSize;
-                        passthroughFormat = format;
-                        passthroughAttributes = attributes;
-
-                        LimeLog.info(String.format("Passthrough enabled: %s, mask 0x%X, buffer %d bytes = %.1f frames (setting: %s, platform minimum %d bytes, capacity %s)",
-                                codec.displayName, channelMask, bufferSize, (double) bufferSize / unitBytes,
-                                bufferFrames > 0 ? bufferFrames + " frames" : "auto", minBufferSize,
-                                Build.VERSION.SDK_INT >= Build.VERSION_CODES.N ?
-                                        String.valueOf(track.getBufferCapacityInFrames()) : "n/a"));
-                        if (codec != passthroughCodec) {
-                            LimeLog.warning("Passthrough: fell back from " + passthroughCodec.displayName +
-                                    " to " + codec.displayName);
-                        }
-                        return true;
-                    } catch (Exception e) {
-                        LimeLog.warning(String.format("Passthrough: %s mask 0x%X buffer %d failed: %s",
-                                codec.displayName, channelMask, bufferSize, e));
-                        releasePassthrough();
-                    }
+            // Some HALs only accept compressed formats declared as stereo
+            int[] channelMasks = { AudioFormat.CHANNEL_OUT_5POINT1, AudioFormat.CHANNEL_OUT_STEREO };
+            for (int channelMask : channelMasks) {
+                if (tryPassthroughTrack(audioConfiguration, sampleRate, attributes, codec, false,
+                        encoding, channelMask, getWriteUnitBytes(codec))) {
+                    return true;
                 }
             }
         }
 
+        return false;
+    }
+
+    private boolean tryPassthroughTrack(MoonBridge.AudioConfiguration audioConfiguration, int sampleRate,
+                                        AudioAttributes attributes, Codec codec, boolean iec61937,
+                                        int encoding, int channelMask, int unitBytes) {
+        String mode = codec.displayName + (iec61937 ? " (IEC 61937)" : "");
+        AudioFormat format = new AudioFormat.Builder()
+                .setEncoding(encoding)
+                .setSampleRate(sampleRate)
+                .setChannelMask(channelMask)
+                .build();
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q &&
+                !AudioTrack.isDirectPlaybackSupported(format, attributes)) {
+            LimeLog.info(String.format("Passthrough: %s direct playback not supported with channel mask 0x%X",
+                    mode, channelMask));
+            return false;
+        }
+
+        // AudioFlinger won't start a streaming track until its buffer is full,
+        // so the buffer size is effectively our output latency. Try the requested
+        // size first, then something larger.
+        int minBufferSize = AudioTrack.getMinBufferSize(sampleRate, channelMask, encoding);
+        int requested = bufferFrames > 0 ?
+                unitBytes * bufferFrames : Math.max(minBufferSize, unitBytes * 2);
+        if (iec61937) {
+            // Whole bursts only
+            requested = (requested + unitBytes - 1) / unitBytes * unitBytes;
+        }
+        int[] bufferSizes = { requested, Math.max(minBufferSize, requested + unitBytes * 2) };
+
+        for (int bufferSize : bufferSizes) {
+            try {
+                track = createPassthroughAudioTrack(format, attributes, bufferSize);
+                if (track.getState() != AudioTrack.STATE_INITIALIZED) {
+                    throw new IllegalStateException("AudioTrack not initialized");
+                }
+
+                encoder = new PassthroughEncoder(codec, sampleRate, audioConfiguration.channelCount, 0, iec61937);
+                track.play();
+                trackBufferBytes = bufferSize;
+                passthroughFormat = format;
+                passthroughAttributes = attributes;
+                passthroughIec61937 = iec61937;
+
+                LimeLog.info(String.format("Passthrough enabled: %s, mask 0x%X, buffer %d bytes = %.1f frames (setting: %s, platform minimum %d bytes, capacity %s)",
+                        mode, channelMask, bufferSize, (double) bufferSize / unitBytes,
+                        bufferFrames > 0 ? bufferFrames + " frames" : "auto", minBufferSize,
+                        Build.VERSION.SDK_INT >= Build.VERSION_CODES.N ?
+                                String.valueOf(track.getBufferCapacityInFrames()) : "n/a"));
+                if (codec != passthroughCodec) {
+                    LimeLog.warning("Passthrough: fell back from " + passthroughCodec.displayName +
+                            " to " + codec.displayName);
+                }
+                return true;
+            } catch (Exception e) {
+                LimeLog.warning(String.format("Passthrough: %s mask 0x%X buffer %d failed: %s",
+                        mode, channelMask, bufferSize, e));
+                releasePassthrough();
+            }
+        }
         return false;
     }
 
@@ -516,6 +552,9 @@ public class AndroidAudioRenderer implements AudioRenderer {
         long framesWritten;
         if (encoder != null) {
             sb.append(encoder.getCodec().displayName);
+            if (passthroughIec61937) {
+                sb.append(" IEC61937");
+            }
             framesWritten = encoder.getSamplesOutput() - framesWrittenBase;
         }
         else {
@@ -545,7 +584,7 @@ public class AndroidAudioRenderer implements AudioRenderer {
         int frameworkLatency = getFrameworkLatency();
         if (frameworkLatency >= 0) {
             sb.append(", AudioTrack latency ").append(frameworkLatency).append(" ms");
-            if (encoder != null) {
+            if (encoder != null && !passthroughIec61937) {
                 // For compressed tracks the framework counts each buffer byte as a
                 // frame, so subtract that to estimate the HAL's own latency
                 sb.append(String.format(" (~HAL %.0f ms)",

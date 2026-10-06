@@ -28,6 +28,10 @@ struct Ptenc {
     int pending_units;
 
     int64_t samples_output;
+
+    // When set, each AC-3/DTS frame is wrapped in an IEC 61937 burst
+    int iec61937;
+    int burst_bytes;
 };
 
 static void set_err(char* err, size_t err_len, const char* what, int averr) {
@@ -115,8 +119,12 @@ static enum AVSampleFormat pick_sample_fmt(const AVCodec* codec) {
 }
 
 Ptenc* ptenc_create(PtencCodec codec_type, int sample_rate, int channels, int bitrate,
-                    char* err, size_t err_len) {
+                    int iec61937, char* err, size_t err_len) {
     AVChannelLayout layout;
+    if (iec61937 && codec_type == PTENC_CODEC_TRUEHD) {
+        set_err(err, err_len, "IEC 61937 packing is only implemented for AC-3 and DTS", 0);
+        return NULL;
+    }
     if (pick_layout(codec_type, channels, &layout) < 0) {
         set_err(err, err_len, "Unsupported channel count for this codec", 0);
         return NULL;
@@ -185,6 +193,11 @@ Ptenc* ptenc_create(PtencCodec codec_type, int sample_rate, int channels, int bi
     }
 
     enc->frame_size = enc->ctx->frame_size;
+    if (iec61937) {
+        // One burst spans the frame's duration as 16-bit stereo: 4 bytes per sample
+        enc->iec61937 = 1;
+        enc->burst_bytes = enc->frame_size * 4;
+    }
 
     enc->pending = malloc((size_t)enc->max_unit_bytes * enc->units_per_write);
     enc->frame = av_frame_alloc();
@@ -234,6 +247,9 @@ int ptenc_codec_delay(const Ptenc* enc) {
 int ptenc_max_output(const Ptenc* enc, int sample_count) {
     // Every frame completed by this call could finish a write unit
     int frames = sample_count / enc->frame_size + 1;
+    if (enc->iec61937) {
+        return (frames + 1) * enc->burst_bytes;
+    }
     return (frames + enc->units_per_write) * enc->max_unit_bytes;
 }
 
@@ -293,6 +309,51 @@ static void convert_input(Ptenc* enc, const int16_t* src, int count) {
     }
 }
 
+static void put_le16(uint8_t* p, unsigned v) {
+    p[0] = v & 0xff;
+    p[1] = (v >> 8) & 0xff;
+}
+
+// Wraps one AC-3 or DTS frame in an IEC 61937 data burst (little-endian
+// 16-bit words, as written to a 16-bit stereo PCM stream), matching
+// FFmpeg's spdif muxer. Returns the burst size or a negative error.
+static int iec61937_pack(const Ptenc* enc, const uint8_t* data, int size, uint8_t* out) {
+    unsigned data_type;
+    if (enc->codec == PTENC_CODEC_AC3) {
+        // Pc: AC-3 with the frame's bitstream mode (bsmod)
+        data_type = 0x01 | ((data[5] & 0x7) << 8);
+    }
+    else {
+        // Pc: DTS type I (512 samples per frame)
+        data_type = 0x0B;
+    }
+
+    int payload = size & ~1;
+    int used = 8 + payload + ((size & 1) ? 2 : 0);
+    if (used > enc->burst_bytes) {
+        return AVERROR(EINVAL);
+    }
+
+    put_le16(out + 0, 0xF872);                        // Pa
+    put_le16(out + 2, 0x4E1F);                        // Pb
+    put_le16(out + 4, data_type);                     // Pc
+    put_le16(out + 6, (unsigned)((size + 1) & ~1) << 3); // Pd: length in bits
+
+    // The bitstream is big-endian 16-bit words; swap to little-endian
+    for (int i = 0; i < payload; i += 2) {
+        out[8 + i] = data[i + 1];
+        out[8 + i + 1] = data[i];
+    }
+    int pos = 8 + payload;
+    if (size & 1) {
+        // A final lone byte is MSB aligned
+        put_le16(out + pos, (unsigned)data[size - 1] << 8);
+        pos += 2;
+    }
+    memset(out + pos, 0, enc->burst_bytes - pos);
+    return enc->burst_bytes;
+}
+
 // Sends the full frame to the encoder. Received packets are collected into
 // write units; each completed unit is appended to out.
 static int flush_frame(Ptenc* enc, uint8_t* out, int out_cap, int* out_len) {
@@ -323,11 +384,23 @@ static int flush_frame(Ptenc* enc, uint8_t* out, int out_cap, int* out_len) {
         av_packet_unref(enc->pkt);
 
         if (enc->pending_units == enc->units_per_write) {
-            if (*out_len + enc->pending_bytes > out_cap) {
-                return AVERROR(ENOSPC);
+            if (enc->iec61937) {
+                if (*out_len + enc->burst_bytes > out_cap) {
+                    return AVERROR(ENOSPC);
+                }
+                int burst = iec61937_pack(enc, enc->pending, enc->pending_bytes, out + *out_len);
+                if (burst < 0) {
+                    return burst;
+                }
+                *out_len += burst;
             }
-            memcpy(out + *out_len, enc->pending, enc->pending_bytes);
-            *out_len += enc->pending_bytes;
+            else {
+                if (*out_len + enc->pending_bytes > out_cap) {
+                    return AVERROR(ENOSPC);
+                }
+                memcpy(out + *out_len, enc->pending, enc->pending_bytes);
+                *out_len += enc->pending_bytes;
+            }
             enc->samples_output += (int64_t)enc->pending_units * enc->frame_size;
             enc->pending_bytes = 0;
             enc->pending_units = 0;

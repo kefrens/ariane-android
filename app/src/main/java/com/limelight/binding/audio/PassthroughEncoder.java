@@ -80,14 +80,16 @@ public class PassthroughEncoder {
      * @param sampleRate sample rate in Hz (48000 for Moonlight)
      * @param channelCount 2 or 6 (4 also works for AC-3 and DTS)
      * @param bitrate bits per second, or 0 for the codec default
+     * @param iec61937 wrap each frame in an IEC 61937 burst for an ENCODING_IEC61937
+     *                 track (AC-3 and DTS only)
      * @throws IllegalStateException if the encoder can't be created
      */
-    public PassthroughEncoder(Codec codec, int sampleRate, int channelCount, int bitrate) {
+    public PassthroughEncoder(Codec codec, int sampleRate, int channelCount, int bitrate, boolean iec61937) {
         if (!LIBRARY_LOADED) {
             throw new IllegalStateException("Passthrough encoder library not available");
         }
 
-        handle = nativeCreate(codec.id, sampleRate, channelCount, bitrate);
+        handle = nativeCreate(codec.id, sampleRate, channelCount, bitrate, iec61937);
         if (handle == 0) {
             throw new IllegalStateException("Failed to create " + codec.displayName + " encoder ("
                     + sampleRate + " Hz, " + channelCount + " ch)");
@@ -160,7 +162,7 @@ public class PassthroughEncoder {
     }
 
     private static native boolean nativeIsSupported(int codec);
-    private static native long nativeCreate(int codec, int sampleRate, int channelCount, int bitrate);
+    private static native long nativeCreate(int codec, int sampleRate, int channelCount, int bitrate, boolean iec61937);
     private static native int nativeWriteSize(long handle);
     private static native int nativeCodecDelay(long handle);
     private static native int nativeMaxOutput(long handle, int sampleCount);

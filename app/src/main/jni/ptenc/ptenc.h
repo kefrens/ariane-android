@@ -42,9 +42,14 @@ int ptenc_is_supported(PtencCodec codec);
 // bitrate: bits per second, or 0 for the codec default (AC-3 640 kbps,
 // DTS 1509.75 kbps; ignored for lossless TrueHD).
 //
+// iec61937: wrap each AC-3/DTS frame in an IEC 61937 burst (as sent over
+// S/PDIF/HDMI) so the output can be written to an ENCODING_IEC61937 track:
+// one burst lasts exactly one frame (AC-3 6144 bytes, DTS 2048 bytes).
+// Not supported for TrueHD.
+//
 // Returns NULL on failure; if err is non-NULL a message is written to it.
 Ptenc* ptenc_create(PtencCodec codec, int sample_rate, int channels, int bitrate,
-                    char* err, size_t err_len);
+                    int iec61937, char* err, size_t err_len);
 
 // Samples per channel in one codec frame / access unit.
 int ptenc_frame_size(const Ptenc* enc);
