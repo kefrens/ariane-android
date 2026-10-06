@@ -89,7 +89,8 @@ public class PreferenceConfiguration {
     private static final String ABSOLUTE_MOUSE_MODE_PREF_STRING = "checkbox_absolute_mouse_mode";
     private static final String ENABLE_AUDIO_FX_PREF_STRING = "checkbox_enable_audiofx";
     private static final String PASSTHROUGH_FORMAT_PREF_STRING = "list_passthrough_format";
-    private static final String PASSTHROUGH_LOW_LATENCY_PREF_STRING = "checkbox_passthrough_low_latency";
+    private static final String PASSTHROUGH_BUFFER_PREF_STRING = "list_passthrough_buffer";
+    private static final String LEGACY_PASSTHROUGH_LOW_LATENCY_PREF_STRING = "checkbox_passthrough_low_latency";
     // Earlier builds of this fork had a single Dolby Digital checkbox
     private static final String LEGACY_AC3_PASSTHROUGH_PREF_STRING = "checkbox_ac3_passthrough";
     private static final String REDUCE_REFRESH_RATE_PREF_STRING = "checkbox_reduce_refresh_rate";
@@ -189,7 +190,7 @@ public class PreferenceConfiguration {
     private static final boolean DEFAULT_ABSOLUTE_MOUSE_MODE = false;
     private static final boolean DEFAULT_ENABLE_AUDIO_FX = false;
     private static final String DEFAULT_PASSTHROUGH_FORMAT = "off";
-    private static final boolean DEFAULT_PASSTHROUGH_LOW_LATENCY = false;
+    private static final String DEFAULT_PASSTHROUGH_BUFFER = "auto";
     private static final boolean DEFAULT_REDUCE_REFRESH_RATE = false;
     private static final boolean DEFAULT_FULL_RANGE = false;
     private static final boolean DEFAULT_GAMEPAD_TOUCHPAD_AS_MOUSE = false;
@@ -379,7 +380,7 @@ public class PreferenceConfiguration {
     public boolean absoluteMouseMode;
     public boolean enableAudioFx;
     public PassthroughEncoder.Codec passthroughCodec; // null for PCM
-    public boolean passthroughLowLatency;
+    public int passthroughBufferFrames; // 0 = auto
     public boolean reduceRefreshRate;
     public boolean fullRange;
     public boolean gamepadMotionSensors;
@@ -875,7 +876,19 @@ private static int getFramePacingValue(Context context) {
         config.passthroughCodec = PassthroughEncoder.isAvailable() ?
                 PassthroughEncoder.Codec.fromPrefValue(prefs.getString(PASSTHROUGH_FORMAT_PREF_STRING, DEFAULT_PASSTHROUGH_FORMAT)) :
                 null;
-        config.passthroughLowLatency = prefs.getBoolean(PASSTHROUGH_LOW_LATENCY_PREF_STRING, DEFAULT_PASSTHROUGH_LOW_LATENCY);
+        if (prefs.contains(LEGACY_PASSTHROUGH_LOW_LATENCY_PREF_STRING)) {
+            // Migrate the old low-latency checkbox (1 frame) to the buffer list
+            if (prefs.getBoolean(LEGACY_PASSTHROUGH_LOW_LATENCY_PREF_STRING, false)) {
+                prefs.edit().putString(PASSTHROUGH_BUFFER_PREF_STRING, "1").apply();
+            }
+            prefs.edit().remove(LEGACY_PASSTHROUGH_LOW_LATENCY_PREF_STRING).apply();
+        }
+        try {
+            config.passthroughBufferFrames = Integer.parseInt(
+                    prefs.getString(PASSTHROUGH_BUFFER_PREF_STRING, DEFAULT_PASSTHROUGH_BUFFER));
+        } catch (NumberFormatException e) {
+            config.passthroughBufferFrames = 0; // auto
+        }
         if (config.passthroughCodec != null &&
                 config.audioConfiguration.equals(MoonBridge.AUDIO_CONFIGURATION_71_SURROUND)) {
             // Our encoders top out at 5.1, so have the host mix to 5.1 rather than dropping channels here

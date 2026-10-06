@@ -224,8 +224,13 @@
     <string name="passthrough_format_ac3">Dolby Digital</string>
     <string name="passthrough_format_dts">DTS (lowest latency)</string>
     <string name="passthrough_format_truehd">Dolby TrueHD (experimental)</string>
-    <string name="title_checkbox_passthrough_low_latency">Low-latency passthrough buffer</string>
-    <string name="summary_checkbox_passthrough_low_latency">Buffers 1 frame instead of 2 (saves 32 ms with Dolby Digital, 11 ms with DTS). May cause crackles on an unstable network.</string>
+    <string name="title_list_passthrough_buffer">Passthrough buffer</string>
+    <string name="summary_list_passthrough_buffer">How many encoded frames to buffer before the TV. Fewer frames means less latency (each frame is 32 ms with Dolby Digital, 10.7 ms with DTS) but choppy audio if the TV needs more. Auto uses the size the TV asks for.</string>
+    <string name="passthrough_buffer_auto">Auto (TV minimum)</string>
+    <string name="passthrough_buffer_1">1 frame</string>
+    <string name="passthrough_buffer_2">2 frames</string>
+    <string name="passthrough_buffer_3">3 frames</string>
+    <string name="passthrough_buffer_4">4 frames</string>
 
     <string name="category_gamepad_settings">Gamepad Settings</string>
     <string name="title_checkbox_multi_controller">Automatic gamepad presence detection</string>

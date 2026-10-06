@@ -401,7 +401,7 @@ public class StreamSettings extends AppCompatActivity {
                 PreferenceCategory category =
                         (PreferenceCategory) findPreference("category_audio_settings");
                 category.removePreference(findPreference("list_passthrough_format"));
-                category.removePreference(findPreference("checkbox_passthrough_low_latency"));
+                category.removePreference(findPreference("list_passthrough_buffer"));
             }
 
             // Fire TV apps are not allowed to use WebViews or browsers, so hide the Help category

@@ -28,11 +28,20 @@ public class AndroidAudioRenderer implements AudioRenderer {
     private final Context context;
     private final boolean enableAudioFx;
     private final Codec passthroughCodec;
-    private final boolean lowLatencyBuffer;
+    private final int bufferFrames;
     private AudioTrack track;
     private int sampleRate;
     private int channelCount;
     private int trackBufferBytes;
+
+    // Parameters of the current track, so it can be recreated if the output dies
+    // (e.g. HDMI/eARC renegotiation makes writes fail with ERROR_DEAD_OBJECT)
+    private AudioFormat passthroughFormat;
+    private AudioAttributes passthroughAttributes;
+    private int pcmChannelConfig;
+    private boolean pcmLowLatency;
+    private long lastRecreateTime;
+    private long framesWrittenBase;
 
     // Non-null when we're encoding to a bitstream format for passthrough
     private PassthroughEncoder encoder;
@@ -45,21 +54,23 @@ public class AndroidAudioRenderer implements AudioRenderer {
     private double encoderBufferedSum;
     private int encoderBufferedCount;
     private Method getLatencyMethod;
+    private int lastUnderrunCount;
 
     public AndroidAudioRenderer(Context context, boolean enableAudioFx) {
-        this(context, enableAudioFx, null, false);
+        this(context, enableAudioFx, null, 0);
     }
 
     /**
      * @param passthroughCodec bitstream format to encode multichannel audio to, or null for PCM
-     * @param lowLatencyBuffer use a 1 frame passthrough AudioTrack buffer instead of 2
+     * @param bufferFrames passthrough AudioTrack buffer size in codec frames,
+     *                     or 0 to use the platform minimum (at least 2 frames)
      */
     public AndroidAudioRenderer(Context context, boolean enableAudioFx,
-                                Codec passthroughCodec, boolean lowLatencyBuffer) {
+                                Codec passthroughCodec, int bufferFrames) {
         this.context = context;
         this.enableAudioFx = enableAudioFx;
         this.passthroughCodec = passthroughCodec;
-        this.lowLatencyBuffer = lowLatencyBuffer;
+        this.bufferFrames = bufferFrames;
     }
 
     private AudioTrack createAudioTrack(int channelConfig, int sampleRate, int bufferSize, boolean lowLatency) {
@@ -186,7 +197,6 @@ public class AndroidAudioRenderer implements AudioRenderer {
 
         // Some HALs only accept compressed formats declared as stereo
         int[] channelMasks = { AudioFormat.CHANNEL_OUT_5POINT1, AudioFormat.CHANNEL_OUT_STEREO };
-        int units = lowLatencyBuffer ? 1 : 2;
 
         for (Codec codec : getFallbackChain(passthroughCodec)) {
             int encoding = getEncoding(codec);
@@ -210,11 +220,14 @@ public class AndroidAudioRenderer implements AudioRenderer {
                 }
 
                 // AudioFlinger won't start a streaming track until its buffer is full,
-                // so the buffer size is effectively our output latency. Try the
-                // requested number of frames first, then what the platform asks for.
+                // so the buffer size is effectively our output latency. A buffer smaller
+                // than what the HAL consumes per period underruns constantly, though.
+                // Try the requested size first, then something larger.
                 int unitBytes = getWriteUnitBytes(codec);
                 int minBufferSize = AudioTrack.getMinBufferSize(sampleRate, channelMask, encoding);
-                int[] bufferSizes = { unitBytes * units, Math.max(minBufferSize, unitBytes * (units + 2)) };
+                int requested = bufferFrames > 0 ?
+                        unitBytes * bufferFrames : Math.max(minBufferSize, unitBytes * 2);
+                int[] bufferSizes = { requested, Math.max(minBufferSize, requested + unitBytes * 2) };
 
                 for (int bufferSize : bufferSizes) {
                     try {
@@ -226,9 +239,14 @@ public class AndroidAudioRenderer implements AudioRenderer {
                         encoder = new PassthroughEncoder(codec, sampleRate, audioConfiguration.channelCount, 0);
                         track.play();
                         trackBufferBytes = bufferSize;
+                        passthroughFormat = format;
+                        passthroughAttributes = attributes;
 
-                        LimeLog.info(String.format("Passthrough enabled: %s, mask 0x%X, buffer %d bytes (%d requested frame%s)",
-                                codec.displayName, channelMask, bufferSize, units, units == 1 ? "" : "s"));
+                        LimeLog.info(String.format("Passthrough enabled: %s, mask 0x%X, buffer %d bytes = %.1f frames (setting: %s, platform minimum %d bytes, capacity %s)",
+                                codec.displayName, channelMask, bufferSize, (double) bufferSize / unitBytes,
+                                bufferFrames > 0 ? bufferFrames + " frames" : "auto", minBufferSize,
+                                Build.VERSION.SDK_INT >= Build.VERSION_CODES.N ?
+                                        String.valueOf(track.getBufferCapacityInFrames()) : "n/a"));
                         if (codec != passthroughCodec) {
                             LimeLog.warning("Passthrough: fell back from " + passthroughCodec.displayName +
                                     " to " + codec.displayName);
@@ -368,6 +386,8 @@ public class AndroidAudioRenderer implements AudioRenderer {
                 track = createAudioTrack(channelConfig, sampleRate, bufferSize, lowLatency);
                 track.play();
                 trackBufferBytes = bufferSize;
+                pcmChannelConfig = channelConfig;
+                pcmLowLatency = lowLatency;
 
                 // Successfully created working AudioTrack. We're done here.
                 LimeLog.info("Audio track configuration: "+bufferSize+" "+lowLatency);
@@ -402,7 +422,10 @@ public class AndroidAudioRenderer implements AudioRenderer {
                 if (len > 0) {
                     // This blocks until the frames fit in the AudioTrack buffer
                     int ret = track.write(encoder.getOutput(), 0, len);
-                    if (ret < 0 && !loggedWriteError) {
+                    if (ret == AudioTrack.ERROR_DEAD_OBJECT) {
+                        recreateTrack();
+                    }
+                    else if (ret < 0 && !loggedWriteError) {
                         LimeLog.warning("Passthrough AudioTrack write failed: " + ret);
                         loggedWriteError = true;
                     }
@@ -423,12 +446,45 @@ public class AndroidAudioRenderer implements AudioRenderer {
                 if (ret > 0) {
                     pcmFramesWritten += ret / channelCount;
                 }
+                else if (ret == AudioTrack.ERROR_DEAD_OBJECT) {
+                    recreateTrack();
+                }
             }
 
             logLatencyIfDue();
         }
         else {
             LimeLog.info("Too much pending audio data: " + MoonBridge.getPendingAudioDuration() +" ms");
+        }
+    }
+
+    // The audio output went away (HDMI/eARC renegotiation, soundbar reconnect...).
+    // Build an identical track so audio comes back instead of staying silent.
+    private void recreateTrack() {
+        long now = SystemClock.elapsedRealtime();
+        if (now - lastRecreateTime < 1000) {
+            return;
+        }
+        lastRecreateTime = now;
+
+        LimeLog.warning("Audio output died (ERROR_DEAD_OBJECT), recreating AudioTrack");
+        try {
+            track.release();
+        } catch (Exception ignored) {}
+
+        try {
+            if (encoder != null) {
+                track = createPassthroughAudioTrack(passthroughFormat, passthroughAttributes, trackBufferBytes);
+                framesWrittenBase = encoder.getSamplesOutput();
+            }
+            else {
+                track = createAudioTrack(pcmChannelConfig, sampleRate, trackBufferBytes, pcmLowLatency);
+                pcmFramesWritten = 0;
+            }
+            track.play();
+            lastUnderrunCount = 0;
+        } catch (Exception e) {
+            LimeLog.warning("Failed to recreate AudioTrack: " + e);
         }
     }
 
@@ -460,7 +516,7 @@ public class AndroidAudioRenderer implements AudioRenderer {
         long framesWritten;
         if (encoder != null) {
             sb.append(encoder.getCodec().displayName);
-            framesWritten = encoder.getSamplesOutput();
+            framesWritten = encoder.getSamplesOutput() - framesWrittenBase;
         }
         else {
             sb.append("PCM");
@@ -470,20 +526,31 @@ public class AndroidAudioRenderer implements AudioRenderer {
 
         // Output latency: what we've written minus what the HAL reports as presented,
         // projected to now from the timestamp's capture time
-        if (track.getTimestamp(timestamp)) {
+        if (!track.getTimestamp(timestamp)) {
+            sb.append("output n/a (no timestamp)");
+        }
+        else if (System.nanoTime() - timestamp.nanoTime > 1000000000L) {
+            // Playback stalled (stream paused, output reconfigured...): the
+            // projection would be meaningless
+            sb.append("output n/a (stale timestamp)");
+        }
+        else {
             double presented = timestamp.framePosition +
                     (System.nanoTime() - timestamp.nanoTime) * sampleRate / 1e9;
             double outputMs = (framesWritten - presented) * 1000.0 / sampleRate;
             sb.append(String.format("output %.1f ms (written %d, presented %d)",
                     outputMs, framesWritten, timestamp.framePosition));
         }
-        else {
-            sb.append("output n/a (no timestamp)");
-        }
 
         int frameworkLatency = getFrameworkLatency();
         if (frameworkLatency >= 0) {
             sb.append(", AudioTrack latency ").append(frameworkLatency).append(" ms");
+            if (encoder != null) {
+                // For compressed tracks the framework counts each buffer byte as a
+                // frame, so subtract that to estimate the HAL's own latency
+                sb.append(String.format(" (~HAL %.0f ms)",
+                        frameworkLatency - trackBufferBytes * 1000.0 / sampleRate));
+            }
         }
 
         if (encoder != null && encoderBufferedCount > 0) {
@@ -495,7 +562,11 @@ public class AndroidAudioRenderer implements AudioRenderer {
         }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            sb.append(", underruns ").append(track.getUnderrunCount());
+            int underruns = track.getUnderrunCount();
+            sb.append(", underruns ").append(underruns - lastUnderrunCount)
+                    .append(" in last ").append(LATENCY_LOG_INTERVAL_MS / 1000).append(" s (total ")
+                    .append(underruns).append(')');
+            lastUnderrunCount = underruns;
         }
 
         LimeLog.info(sb.toString());
@@ -528,8 +599,12 @@ public class AndroidAudioRenderer implements AudioRenderer {
     @Override
     public void cleanup() {
         // Immediately drop all pending data
-        track.pause();
-        track.flush();
+        try {
+            track.pause();
+            track.flush();
+        } catch (IllegalStateException e) {
+            // Track was already released (failed recreation after the output died)
+        }
         track.release();
 
         if (encoder != null) {
