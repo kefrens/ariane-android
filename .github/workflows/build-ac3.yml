@@ -1,4 +1,4 @@
-name: Build APK (with AC-3 passthrough)
+name: Build APK (with surround passthrough)
 
 on:
   workflow_dispatch:
@@ -25,26 +25,32 @@ jobs:
           yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "ndk;${NDK_VERSION}" > /dev/null
           echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/${NDK_VERSION}" >> "$GITHUB_ENV"
 
-      - name: Cache FFmpeg AC-3 libraries
+      - name: Cache FFmpeg encoder libraries
         id: ffmpeg-cache
         uses: actions/cache@v4
         with:
-          path: app/src/main/jni/ac3enc/ffmpeg
-          key: ffmpeg-ac3-${{ env.NDK_VERSION }}-${{ hashFiles('app/src/main/jni/ac3enc/build-ffmpeg-ac3.sh') }}
+          path: app/src/main/jni/ptenc/ffmpeg
+          key: ffmpeg-ptenc-${{ env.NDK_VERSION }}-${{ hashFiles('app/src/main/jni/ptenc/build-ffmpeg.sh') }}
 
-      - name: Build FFmpeg AC-3 encoder
+      - name: Build FFmpeg encoders
         if: steps.ffmpeg-cache.outputs.cache-hit != 'true'
-        run: app/src/main/jni/ac3enc/build-ffmpeg-ac3.sh
+        run: app/src/main/jni/ptenc/build-ffmpeg.sh
 
       - name: Build APK
         run: ./gradlew --no-daemon assembleNonRoot_gameAc3
 
-      - name: Check that the AC-3 library was packaged
+      - name: Check that the encoder library was packaged and the APK is signed
         run: |
           for apk in app/build/outputs/apk/nonRoot_game/ac3/*.apk; do
-            echo "$apk:"; unzip -l "$apk" | grep -E 'libmoonlight-(ac3|core)\.so' || true
+            echo "$apk:"; unzip -l "$apk" | grep -E 'libmoonlight-(ptenc|core)\.so' || true
           done
-          unzip -l app/build/outputs/apk/nonRoot_game/ac3/*arm64-v8a*.apk | grep -q libmoonlight-ac3.so
+          unzip -l app/build/outputs/apk/nonRoot_game/ac3/*arm64-v8a*.apk | grep -q libmoonlight-ptenc.so
+          # All three encoders must be compiled in
+          NM="$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-nm"
+          for enc in ff_ac3_encoder ff_dca_encoder ff_truehd_encoder; do
+            "$NM" app/src/main/jni/ptenc/ffmpeg/arm64-v8a/lib/libavcodec.a 2>/dev/null | grep -qE " [DdRr] $enc$" \
+              || { echo "encoder $enc missing"; exit 1; }
+          done
           APKSIGNER=$(ls "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -n1)
           "$APKSIGNER" verify --print-certs app/build/outputs/apk/nonRoot_game/ac3/*arm64-v8a*.apk
 

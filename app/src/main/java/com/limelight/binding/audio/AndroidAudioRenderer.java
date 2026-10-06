@@ -5,38 +5,61 @@ import android.content.Intent;
 import android.media.AudioAttributes;
 import android.media.AudioFormat;
 import android.media.AudioManager;
+import android.media.AudioTimestamp;
 import android.media.AudioTrack;
 import android.media.audiofx.AudioEffect;
 import android.os.Build;
+import android.os.SystemClock;
 
 import com.limelight.LimeLog;
+import com.limelight.binding.audio.PassthroughEncoder.Codec;
 import com.limelight.nvstream.av.audio.AudioRenderer;
 import com.limelight.nvstream.jni.MoonBridge;
 
+import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.List;
+
 public class AndroidAudioRenderer implements AudioRenderer {
 
-    // Dolby Digital passthrough settings. 640 kbps is the highest AC-3 bitrate
-    // and gives 2560 byte frames at 48 kHz (1536 samples = 32 ms per frame).
-    private static final int AC3_BITRATE = 640000;
-    private static final int AC3_FRAME_BYTES = 2560;
+    // How often to log measured output latency
+    private static final long LATENCY_LOG_INTERVAL_MS = 5000;
 
     private final Context context;
     private final boolean enableAudioFx;
-    private final boolean ac3Passthrough;
+    private final Codec passthroughCodec;
+    private final boolean lowLatencyBuffer;
     private AudioTrack track;
+    private int sampleRate;
+    private int channelCount;
+    private int trackBufferBytes;
 
-    // Non-null when we're encoding to AC-3 and writing a passthrough bitstream
-    private Ac3Encoder ac3Encoder;
+    // Non-null when we're encoding to a bitstream format for passthrough
+    private PassthroughEncoder encoder;
     private boolean loggedWriteError;
 
+    // Latency statistics
+    private final AudioTimestamp timestamp = new AudioTimestamp();
+    private long pcmFramesWritten;
+    private long lastLatencyLogTime;
+    private double encoderBufferedSum;
+    private int encoderBufferedCount;
+    private Method getLatencyMethod;
+
     public AndroidAudioRenderer(Context context, boolean enableAudioFx) {
-        this(context, enableAudioFx, false);
+        this(context, enableAudioFx, null, false);
     }
 
-    public AndroidAudioRenderer(Context context, boolean enableAudioFx, boolean ac3Passthrough) {
+    /**
+     * @param passthroughCodec bitstream format to encode multichannel audio to, or null for PCM
+     * @param lowLatencyBuffer use a 1 frame passthrough AudioTrack buffer instead of 2
+     */
+    public AndroidAudioRenderer(Context context, boolean enableAudioFx,
+                                Codec passthroughCodec, boolean lowLatencyBuffer) {
         this.context = context;
         this.enableAudioFx = enableAudioFx;
-        this.ac3Passthrough = ac3Passthrough;
+        this.passthroughCodec = passthroughCodec;
+        this.lowLatencyBuffer = lowLatencyBuffer;
     }
 
     private AudioTrack createAudioTrack(int channelConfig, int sampleRate, int bufferSize, boolean lowLatency) {
@@ -78,7 +101,7 @@ public class AndroidAudioRenderer implements AudioRenderer {
         }
     }
 
-    private static AudioTrack createAc3AudioTrack(AudioFormat format, AudioAttributes attributes, int bufferSize) {
+    private static AudioTrack createPassthroughAudioTrack(AudioFormat format, AudioAttributes attributes, int bufferSize) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             // No low latency performance mode here: it's only available for PCM
             return new AudioTrack.Builder()
@@ -97,12 +120,60 @@ public class AndroidAudioRenderer implements AudioRenderer {
         }
     }
 
-    // Tries to set up an AC-3 passthrough AudioTrack fed by our AC-3 encoder.
+    // AudioFormat encoding for a codec, or -1 if this Android version can't pass it through
+    private static int getEncoding(Codec codec) {
+        switch (codec) {
+            case AC3:
+                return AudioFormat.ENCODING_AC3;
+            case DTS:
+                return AudioFormat.ENCODING_DTS;
+            case TRUEHD:
+                return Build.VERSION.SDK_INT >= Build.VERSION_CODES.N_MR1 ?
+                        AudioFormat.ENCODING_DOLBY_TRUEHD : -1;
+            default:
+                return -1;
+        }
+    }
+
+    // Bytes in one write unit, used to size the AudioTrack buffer
+    private static int getWriteUnitBytes(Codec codec) {
+        switch (codec) {
+            case AC3:
+                // 640 kbps, 1536 samples
+                return 2560;
+            case DTS:
+                // 1509.75 kbps, 512 samples
+                return 2012;
+            case TRUEHD:
+            default:
+                // Variable bitrate; 16 access units (640 samples) at ~6 Mbps peak
+                return 10240;
+        }
+    }
+
+    // The requested codec followed by the cheaper formats we fall back to
+    private static List<Codec> getFallbackChain(Codec requested) {
+        List<Codec> chain = new ArrayList<>();
+        switch (requested) {
+            case TRUEHD:
+                chain.add(Codec.TRUEHD);
+                // fall through
+            case DTS:
+                chain.add(Codec.DTS);
+                // fall through
+            case AC3:
+                chain.add(Codec.AC3);
+                break;
+        }
+        return chain;
+    }
+
+    // Tries to set up a passthrough AudioTrack fed by one of our encoders.
     // Returns false (leaving no track or encoder behind) if that isn't possible,
     // in which case the caller falls back to PCM.
-    private boolean setupAc3Passthrough(MoonBridge.AudioConfiguration audioConfiguration, int sampleRate) {
-        if (!Ac3Encoder.isAvailable()) {
-            LimeLog.warning("AC-3 passthrough: encoder library not included in this build");
+    private boolean setupPassthrough(MoonBridge.AudioConfiguration audioConfiguration, int sampleRate) {
+        if (!PassthroughEncoder.isAvailable()) {
+            LimeLog.warning("Passthrough: encoder library not included in this build");
             return false;
         }
 
@@ -115,43 +186,59 @@ public class AndroidAudioRenderer implements AudioRenderer {
 
         // Some HALs only accept compressed formats declared as stereo
         int[] channelMasks = { AudioFormat.CHANNEL_OUT_5POINT1, AudioFormat.CHANNEL_OUT_STEREO };
+        int units = lowLatencyBuffer ? 1 : 2;
 
-        for (int channelMask : channelMasks) {
-            AudioFormat format = new AudioFormat.Builder()
-                    .setEncoding(AudioFormat.ENCODING_AC3)
-                    .setSampleRate(sampleRate)
-                    .setChannelMask(channelMask)
-                    .build();
-
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q &&
-                    !AudioTrack.isDirectPlaybackSupported(format, attributes)) {
-                LimeLog.info(String.format("AC-3 passthrough: direct playback not supported with channel mask 0x%X", channelMask));
+        for (Codec codec : getFallbackChain(passthroughCodec)) {
+            int encoding = getEncoding(codec);
+            if (encoding < 0 || !PassthroughEncoder.isSupported(codec)) {
+                LimeLog.info("Passthrough: " + codec.displayName + " not available in this build/OS");
                 continue;
             }
 
-            // AudioFlinger won't start a streaming track until its buffer is full,
-            // so the buffer size is effectively our output latency. Try a small
-            // buffer first, then whatever the platform says the minimum is.
-            int minBufferSize = AudioTrack.getMinBufferSize(sampleRate, channelMask, AudioFormat.ENCODING_AC3);
-            int[] bufferSizes = { AC3_FRAME_BYTES * 2, Math.max(minBufferSize, AC3_FRAME_BYTES * 4) };
+            for (int channelMask : channelMasks) {
+                AudioFormat format = new AudioFormat.Builder()
+                        .setEncoding(encoding)
+                        .setSampleRate(sampleRate)
+                        .setChannelMask(channelMask)
+                        .build();
 
-            for (int bufferSize : bufferSizes) {
-                try {
-                    track = createAc3AudioTrack(format, attributes, bufferSize);
-                    if (track.getState() != AudioTrack.STATE_INITIALIZED) {
-                        throw new IllegalStateException("AudioTrack not initialized");
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q &&
+                        !AudioTrack.isDirectPlaybackSupported(format, attributes)) {
+                    LimeLog.info(String.format("Passthrough: %s direct playback not supported with channel mask 0x%X",
+                            codec.displayName, channelMask));
+                    continue;
+                }
+
+                // AudioFlinger won't start a streaming track until its buffer is full,
+                // so the buffer size is effectively our output latency. Try the
+                // requested number of frames first, then what the platform asks for.
+                int unitBytes = getWriteUnitBytes(codec);
+                int minBufferSize = AudioTrack.getMinBufferSize(sampleRate, channelMask, encoding);
+                int[] bufferSizes = { unitBytes * units, Math.max(minBufferSize, unitBytes * (units + 2)) };
+
+                for (int bufferSize : bufferSizes) {
+                    try {
+                        track = createPassthroughAudioTrack(format, attributes, bufferSize);
+                        if (track.getState() != AudioTrack.STATE_INITIALIZED) {
+                            throw new IllegalStateException("AudioTrack not initialized");
+                        }
+
+                        encoder = new PassthroughEncoder(codec, sampleRate, audioConfiguration.channelCount, 0);
+                        track.play();
+                        trackBufferBytes = bufferSize;
+
+                        LimeLog.info(String.format("Passthrough enabled: %s, mask 0x%X, buffer %d bytes (%d requested frame%s)",
+                                codec.displayName, channelMask, bufferSize, units, units == 1 ? "" : "s"));
+                        if (codec != passthroughCodec) {
+                            LimeLog.warning("Passthrough: fell back from " + passthroughCodec.displayName +
+                                    " to " + codec.displayName);
+                        }
+                        return true;
+                    } catch (Exception e) {
+                        LimeLog.warning(String.format("Passthrough: %s mask 0x%X buffer %d failed: %s",
+                                codec.displayName, channelMask, bufferSize, e));
+                        releasePassthrough();
                     }
-
-                    ac3Encoder = new Ac3Encoder(sampleRate, audioConfiguration.channelCount, AC3_BITRATE);
-                    track.play();
-
-                    LimeLog.info(String.format("AC-3 passthrough enabled: mask 0x%X, buffer %d bytes, %d kbps",
-                            channelMask, bufferSize, AC3_BITRATE / 1000));
-                    return true;
-                } catch (Exception e) {
-                    LimeLog.warning(String.format("AC-3 passthrough: mask 0x%X, buffer %d failed: %s",
-                            channelMask, bufferSize, e));
-                    releaseAc3();
                 }
             }
         }
@@ -159,16 +246,16 @@ public class AndroidAudioRenderer implements AudioRenderer {
         return false;
     }
 
-    private void releaseAc3() {
+    private void releasePassthrough() {
         if (track != null) {
             try {
                 track.release();
             } catch (Exception ignored) {}
             track = null;
         }
-        if (ac3Encoder != null) {
-            ac3Encoder.release();
-            ac3Encoder = null;
+        if (encoder != null) {
+            encoder.release();
+            encoder = null;
         }
     }
 
@@ -177,12 +264,15 @@ public class AndroidAudioRenderer implements AudioRenderer {
         int channelConfig;
         int bytesPerFrame;
 
-        // AC-3 is only worth it for multichannel audio; stereo PCM works everywhere
-        if (ac3Passthrough && audioConfiguration.channelCount == 6) {
-            if (setupAc3Passthrough(audioConfiguration, sampleRate)) {
+        this.sampleRate = sampleRate;
+        this.channelCount = audioConfiguration.channelCount;
+
+        // Passthrough is only worth it for multichannel audio; stereo PCM works everywhere
+        if (passthroughCodec != null && audioConfiguration.channelCount == 6) {
+            if (setupPassthrough(audioConfiguration, sampleRate)) {
                 return 0;
             }
-            LimeLog.warning("AC-3 passthrough unavailable, falling back to PCM");
+            LimeLog.warning("Passthrough unavailable, falling back to PCM");
         }
 
         switch (audioConfiguration.channelCount)
@@ -277,6 +367,7 @@ public class AndroidAudioRenderer implements AudioRenderer {
             try {
                 track = createAudioTrack(channelConfig, sampleRate, bufferSize, lowLatency);
                 track.play();
+                trackBufferBytes = bufferSize;
 
                 // Successfully created working AudioTrack. We're done here.
                 LimeLog.info("Audio track configuration: "+bufferSize+" "+lowLatency);
@@ -305,38 +396,115 @@ public class AndroidAudioRenderer implements AudioRenderer {
     public void playDecodedAudio(short[] audioData) {
         // Only queue up to 40 ms of pending audio data in addition to what AudioTrack is buffering for us.
         if (MoonBridge.getPendingAudioDuration() < 40) {
-            if (ac3Encoder != null) {
-                // Accumulates PCM and returns complete AC-3 frames (every 32 ms)
-                int len = ac3Encoder.encode(audioData);
+            if (encoder != null) {
+                // Accumulates PCM and returns complete frames
+                int len = encoder.encode(audioData);
                 if (len > 0) {
                     // This blocks until the frames fit in the AudioTrack buffer
-                    int ret = track.write(ac3Encoder.getOutput(), 0, len);
+                    int ret = track.write(encoder.getOutput(), 0, len);
                     if (ret < 0 && !loggedWriteError) {
-                        LimeLog.warning("AC-3 AudioTrack write failed: " + ret);
+                        LimeLog.warning("Passthrough AudioTrack write failed: " + ret);
                         loggedWriteError = true;
                     }
                 }
                 else if (len < 0 && !loggedWriteError) {
-                    LimeLog.warning("AC-3 encode failed: " + len);
+                    LimeLog.warning("Passthrough encode failed: " + len);
                     loggedWriteError = true;
                 }
-                return;
+
+                encoderBufferedSum += encoder.getBufferedSamples();
+                encoderBufferedCount++;
+            }
+            else {
+                // This will block until the write is completed. That can cause a backlog
+                // of pending audio data, so we do the above check to be able to bound
+                // latency at 40 ms in that situation.
+                int ret = track.write(audioData, 0, audioData.length);
+                if (ret > 0) {
+                    pcmFramesWritten += ret / channelCount;
+                }
             }
 
-            // This will block until the write is completed. That can cause a backlog
-            // of pending audio data, so we do the above check to be able to bound
-            // latency at 40 ms in that situation.
-            track.write(audioData, 0, audioData.length);
+            logLatencyIfDue();
         }
         else {
             LimeLog.info("Too much pending audio data: " + MoonBridge.getPendingAudioDuration() +" ms");
         }
     }
 
+    // AudioTrack.getLatency() is hidden but widely implemented; it reports the
+    // framework + HAL latency in ms. Returns -1 if unavailable.
+    private int getFrameworkLatency() {
+        try {
+            if (getLatencyMethod == null) {
+                getLatencyMethod = AudioTrack.class.getMethod("getLatency");
+            }
+            return (Integer) getLatencyMethod.invoke(track);
+        } catch (Exception e) {
+            return -1;
+        }
+    }
+
+    private void logLatencyIfDue() {
+        long now = SystemClock.elapsedRealtime();
+        if (lastLatencyLogTime == 0) {
+            lastLatencyLogTime = now;
+            return;
+        }
+        if (now - lastLatencyLogTime < LATENCY_LOG_INTERVAL_MS) {
+            return;
+        }
+        lastLatencyLogTime = now;
+
+        StringBuilder sb = new StringBuilder("Audio latency [");
+        long framesWritten;
+        if (encoder != null) {
+            sb.append(encoder.getCodec().displayName);
+            framesWritten = encoder.getSamplesOutput();
+        }
+        else {
+            sb.append("PCM");
+            framesWritten = pcmFramesWritten;
+        }
+        sb.append(' ').append(channelCount).append("ch, buffer ").append(trackBufferBytes).append(" B]: ");
+
+        // Output latency: what we've written minus what the HAL reports as presented,
+        // projected to now from the timestamp's capture time
+        if (track.getTimestamp(timestamp)) {
+            double presented = timestamp.framePosition +
+                    (System.nanoTime() - timestamp.nanoTime) * sampleRate / 1e9;
+            double outputMs = (framesWritten - presented) * 1000.0 / sampleRate;
+            sb.append(String.format("output %.1f ms (written %d, presented %d)",
+                    outputMs, framesWritten, timestamp.framePosition));
+        }
+        else {
+            sb.append("output n/a (no timestamp)");
+        }
+
+        int frameworkLatency = getFrameworkLatency();
+        if (frameworkLatency >= 0) {
+            sb.append(", AudioTrack latency ").append(frameworkLatency).append(" ms");
+        }
+
+        if (encoder != null && encoderBufferedCount > 0) {
+            double bufferedMs = encoderBufferedSum / encoderBufferedCount * 1000.0 / sampleRate;
+            double codecDelayMs = encoder.getCodecDelay() * 1000.0 / sampleRate;
+            sb.append(String.format(", encoder wait avg %.1f ms + codec delay %.1f ms", bufferedMs, codecDelayMs));
+            encoderBufferedSum = 0;
+            encoderBufferedCount = 0;
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            sb.append(", underruns ").append(track.getUnderrunCount());
+        }
+
+        LimeLog.info(sb.toString());
+    }
+
     @Override
     public void start() {
         // Audio effects can't process a compressed bitstream
-        if (enableAudioFx && ac3Encoder == null) {
+        if (enableAudioFx && encoder == null) {
             // Open an audio effect control session to allow equalizers to apply audio effects
             Intent i = new Intent(AudioEffect.ACTION_OPEN_AUDIO_EFFECT_CONTROL_SESSION);
             i.putExtra(AudioEffect.EXTRA_AUDIO_SESSION, track.getAudioSessionId());
@@ -348,7 +516,7 @@ public class AndroidAudioRenderer implements AudioRenderer {
 
     @Override
     public void stop() {
-        if (enableAudioFx && ac3Encoder == null) {
+        if (enableAudioFx && encoder == null) {
             // Close our audio effect control session when we're stopping
             Intent i = new Intent(AudioEffect.ACTION_CLOSE_AUDIO_EFFECT_CONTROL_SESSION);
             i.putExtra(AudioEffect.EXTRA_AUDIO_SESSION, track.getAudioSessionId());
@@ -364,9 +532,9 @@ public class AndroidAudioRenderer implements AudioRenderer {
         track.flush();
         track.release();
 
-        if (ac3Encoder != null) {
-            ac3Encoder.release();
-            ac3Encoder = null;
+        if (encoder != null) {
+            encoder.release();
+            encoder = null;
         }
     }
 }

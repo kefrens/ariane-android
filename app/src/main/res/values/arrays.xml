@@ -53,6 +53,18 @@
         <item>51</item>
         <item>71</item>
     </string-array>
+    <string-array name="passthrough_format_names">
+        <item>@string/passthrough_format_off</item>
+        <item>@string/passthrough_format_ac3</item>
+        <item>@string/passthrough_format_dts</item>
+        <item>@string/passthrough_format_truehd</item>
+    </string-array>
+    <string-array name="passthrough_format_values" translatable="false">
+        <item>off</item>
+        <item>ac3</item>
+        <item>dts</item>
+        <item>truehd</item>
+    </string-array>
 
     <!-- Don't forget to update locales_config.xml when you modify this! -->
     <string-array name="language_names" translatable="false">

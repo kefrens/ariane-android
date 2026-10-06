@@ -873,7 +873,8 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
                 decoderRenderer.setRenderTarget(streamContainer.getSurface());
 
                 // Starten Sie die NvConnection
-                conn.start(new AndroidAudioRenderer(Game.this, prefConfig.playHostAudio, prefConfig.ac3Passthrough),
+                conn.start(new AndroidAudioRenderer(Game.this, prefConfig.playHostAudio,
+                                prefConfig.passthroughCodec, prefConfig.passthroughLowLatency),
                         decoderRenderer, Game.this);
             }
         });

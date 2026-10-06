@@ -237,11 +237,19 @@
             android:summary="@string/summary_checkbox_enable_audiofx"
             android:title="@string/title_checkbox_enable_audiofx"
             app:iconSpaceReserved="false" />
+        <ListPreference
+            android:defaultValue="off"
+            android:entries="@array/passthrough_format_names"
+            android:entryValues="@array/passthrough_format_values"
+            android:key="list_passthrough_format"
+            android:summary="@string/summary_list_passthrough_format"
+            android:title="@string/title_list_passthrough_format"
+            app:iconSpaceReserved="false" />
         <CheckBoxPreference
             android:defaultValue="false"
-            android:key="checkbox_ac3_passthrough"
-            android:summary="@string/summary_checkbox_ac3_passthrough"
-            android:title="@string/title_checkbox_ac3_passthrough"
+            android:key="checkbox_passthrough_low_latency"
+            android:summary="@string/summary_checkbox_passthrough_low_latency"
+            android:title="@string/title_checkbox_passthrough_low_latency"
             app:iconSpaceReserved="false" />
     </PreferenceCategory>
 

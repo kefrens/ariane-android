@@ -50,7 +50,7 @@ import com.limelight.GameMenu;
 import com.limelight.LimeLog;
 import com.limelight.PcView;
 import com.limelight.R;
-import com.limelight.binding.audio.Ac3Encoder;
+import com.limelight.binding.audio.PassthroughEncoder;
 import com.limelight.binding.input.virtual_controller.keyboard.KeyBoardControllerConfigurationLoader;
 import com.limelight.binding.video.MediaCodecHelper;
 import com.limelight.utils.Dialog;
@@ -396,11 +396,12 @@ public class StreamSettings extends AppCompatActivity {
                 category.removePreference(findPreference("checkbox_enable_pip"));
             }
 
-            // Hide Dolby Digital passthrough if this build doesn't include the AC-3 encoder
-            if (!Ac3Encoder.isAvailable()) {
+            // Hide surround passthrough if this build doesn't include the encoders
+            if (!PassthroughEncoder.isAvailable()) {
                 PreferenceCategory category =
                         (PreferenceCategory) findPreference("category_audio_settings");
-                category.removePreference(findPreference("checkbox_ac3_passthrough"));
+                category.removePreference(findPreference("list_passthrough_format"));
+                category.removePreference(findPreference("checkbox_passthrough_low_latency"));
             }
 
             // Fire TV apps are not allowed to use WebViews or browsers, so hide the Help category

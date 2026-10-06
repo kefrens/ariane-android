@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 #
 # Builds a minimal static libavcodec + libavutil containing only FFmpeg's
-# AC-3 encoder, for every ABI the APK ships. Output goes to
-#   app/src/main/jni/ac3enc/ffmpeg/<abi>/{lib,include}
+# AC-3, DTS and TrueHD encoders, for every ABI the APK ships. Output goes to
+#   app/src/main/jni/ptenc/ffmpeg/<abi>/{lib,include}
 # which Android.mk in this directory picks up automatically.
 #
 # Requirements: bash, make, git, and the Android NDK (the version pinned in
@@ -76,7 +76,7 @@ build_abi() {
     local build="$WORK/build-$abi" prefix="$OUT_ROOT/$abi"
     rm -rf "$build" "$prefix"
     mkdir -p "$build"
-    echo "=== Building FFmpeg AC-3 encoder for $abi ==="
+    echo "=== Building FFmpeg passthrough encoders for $abi ==="
 
     (
         cd "$build"
@@ -99,7 +99,7 @@ build_abi() {
             --disable-everything --disable-autodetect --disable-network \
             --disable-avdevice --disable-avformat --disable-avfilter \
             --disable-swscale --disable-swresample --disable-postproc \
-            --enable-avcodec --enable-avutil --enable-encoder=ac3 \
+            --enable-avcodec --enable-avutil --enable-encoder=ac3,dca,truehd \
             --extra-cflags="-O2 -fPIC -ffunction-sections -fdata-sections" \
             "${extra[@]}" > configure.log 2>&1 || { tail -n 40 configure.log ffbuild/config.log 2>/dev/null; exit 1; }
         make -j"$JOBS" > make.log 2>&1 || { tail -n 40 make.log; exit 1; }
@@ -115,4 +115,4 @@ for abi in $ABIS; do
     build_abi "$abi"
 done
 
-echo "Done. Rebuild the app to include libmoonlight-ac3.so."
+echo "Done. Rebuild the app to include libmoonlight-ptenc.so."
