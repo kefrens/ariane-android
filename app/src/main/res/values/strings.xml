@@ -755,4 +755,6 @@
 
     <string name="title_checkbox_full_screen">Enable Full Screen</string>
     <string name="summary_checkbox_full_screen">Hide system bars with immersive mode</string>
+    <string name="game_panel_hint_close">Back returns to the game</string>
+    <string name="game_panel_hint_up">Back returns to the previous menu</string>
 </resources>

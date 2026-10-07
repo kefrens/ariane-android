@@ -2,16 +2,21 @@ package com.limelight;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.app.Dialog;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.Handler;
-import android.os.Looper;
 import android.text.TextUtils;
 import android.view.ContextThemeWrapper;
+import android.view.Gravity;
+import android.view.KeyEvent;
+import android.view.LayoutInflater;
 import android.view.View;
-import android.view.ViewTreeObserver;
+import android.view.ViewGroup;
 import android.view.Window;
-import android.widget.ArrayAdapter;
+import android.widget.LinearLayout;
+import android.widget.ScrollView;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.limelight.binding.input.GameInputDevice;
@@ -28,7 +33,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 /**
  * Provide options for ongoing Game Stream.
  * <p>
- * Shown on back action in game activity.
+ * Shown on back action in game activity, as a panel that slides in from the right.
+ * Submenus replace the panel's content, and Back steps back up to the parent menu.
  */
 public class GameMenu implements Game.GameMenuCallbacks {
 
@@ -39,10 +45,14 @@ public class GameMenu implements Game.GameMenuCallbacks {
 
     public static final String KEY_NAME = "special_key"; // 要保存的键名称
 
+    private static final int PANEL_WIDTH_DP = 440;
+
     public static class MenuOption {
         private final String label;
         private final boolean withGameFocus;
         private final Runnable runnable;
+        private int iconRes;
+        private boolean opensSubmenu;
 
         public MenuOption(String label, boolean withGameFocus, Runnable runnable) {
             this.label = label;
@@ -53,12 +63,28 @@ public class GameMenu implements Game.GameMenuCallbacks {
         public MenuOption(String label, Runnable runnable) {
             this(label, false, runnable);
         }
+
+        public MenuOption icon(int iconRes) {
+            this.iconRes = iconRes;
+            return this;
+        }
+
+        // The option shows another menu in the same panel instead of closing it
+        public MenuOption submenu() {
+            this.opensSubmenu = true;
+            return this;
+        }
     }
 
     private final Game game;
     private final Context dialogScreenContext;
 
-    private AlertDialog currentDialog;
+    private Dialog currentDialog;
+    private TextView panelTitle;
+    private TextView panelHint;
+    private LinearLayout panelList;
+    private ScrollView panelScroll;
+    private Runnable panelBack;
 
     public GameMenu(Game game, Context dialogScreenContext) {
         this.game = game;
@@ -105,54 +131,75 @@ public class GameMenu implements Game.GameMenuCallbacks {
         }
     }
 
-    private void showMenuDialog(String title, MenuOption[] options) {
-        int themeResId = game.getApplicationInfo().theme;
-
-        Context themedContext = new ContextThemeWrapper(dialogScreenContext, themeResId);
-        AlertDialog.Builder builder = new AlertDialog.Builder(themedContext);
-        builder.setTitle(title);
-
-        final ArrayAdapter<String> actions = new ArrayAdapter<>(themedContext, android.R.layout.simple_list_item_1);
-
-        builder.setAdapter(actions, (dialog, which) -> {
-            String label = actions.getItem(which);
-            for (MenuOption option : options) {
-                if (label != null && label.equals(option.label)) {
-                    run(option);
-                    break;
-                }
-            }
-        });
-
-        builder.setOnCancelListener(dialog -> hideMenu());
-
-        if (currentDialog != null) {
-            currentDialog.dismiss();
+    private void showMenuDialog(String title, MenuOption[] options, Runnable onBack) {
+        if (currentDialog == null || !currentDialog.isShowing()) {
+            createPanel();
         }
-        currentDialog = builder.show();
 
-        Window window = currentDialog.getWindow();
+        panelBack = onBack;
+        panelTitle.setText(title);
+        panelHint.setText(onBack != null ? R.string.game_panel_hint_up : R.string.game_panel_hint_close);
 
-        if (window != null) {
-            View decorView = window.getDecorView();
-            decorView.getViewTreeObserver().addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
-                @Override
-                public void onGlobalLayout() {
-
-                    decorView.getViewTreeObserver().removeOnGlobalLayoutListener(this);
-
-                    new Handler(Looper.getMainLooper()).post(() -> {
-                        for (MenuOption option : options) {
-                            actions.add(option.label);
-                        }
-                        actions.notifyDataSetChanged();
-                    });
+        LayoutInflater inflater = LayoutInflater.from(currentDialog.getContext());
+        panelList.removeAllViews();
+        for (MenuOption option : options) {
+            TextView item = (TextView) inflater.inflate(R.layout.settings_category_item, panelList, false);
+            item.setText(option.label);
+            item.setCompoundDrawablesRelativeWithIntrinsicBounds(option.iconRes, 0,
+                    option.opensSubmenu ? R.drawable.ic_chevron_right : 0, 0);
+            item.setOnClickListener(v -> {
+                if (option.opensSubmenu) {
+                    if (option.runnable != null) {
+                        option.runnable.run();
+                    }
+                } else {
+                    hideMenu();
+                    run(option);
                 }
             });
+            panelList.addView(item);
+        }
+
+        panelScroll.scrollTo(0, 0);
+        View first = panelList.getChildAt(0);
+        if (first != null) {
+            first.requestFocus();
         }
     }
 
-    private void showSpecialKeysMenu() {
+    private void createPanel() {
+        final Dialog dialog = new Dialog(dialogScreenContext, R.style.Ariane_SidePanel);
+        View root = LayoutInflater.from(dialog.getContext()).inflate(R.layout.game_panel, null);
+        panelTitle = root.findViewById(R.id.gamePanelTitle);
+        panelHint = root.findViewById(R.id.gamePanelHint);
+        panelList = root.findViewById(R.id.gamePanelList);
+        panelScroll = root.findViewById(R.id.gamePanelScroll);
+        dialog.setContentView(root);
+
+        // Back (or B on a gamepad) steps up to the parent menu, and closes the top one
+        dialog.setOnKeyListener((d, keyCode, event) -> {
+            if (keyCode != KeyEvent.KEYCODE_BACK || panelBack == null) {
+                return false;
+            }
+            if (event.getAction() == KeyEvent.ACTION_UP && !event.isCanceled()) {
+                panelBack.run();
+            }
+            return true;
+        });
+        dialog.setOnCancelListener(d -> hideMenu());
+
+        Window window = dialog.getWindow();
+        if (window != null) {
+            float density = dialogScreenContext.getResources().getDisplayMetrics().density;
+            window.setGravity(Gravity.END);
+            window.setLayout((int) (PANEL_WIDTH_DP * density), ViewGroup.LayoutParams.MATCH_PARENT);
+        }
+
+        currentDialog = dialog;
+        dialog.show();
+    }
+
+    private void showSpecialKeysMenu(GameInputDevice device) {
         List<MenuOption> options = new ArrayList<>();
 
         if(!PreferenceConfiguration.readPreferences(game).disableDefaultExtraKeys){
@@ -237,9 +284,8 @@ public class GameMenu implements Game.GameMenuCallbacks {
                 Toast.makeText(game,getString(R.string.wrong_import_format),Toast.LENGTH_SHORT).show();
             }
         }
-        options.add(new MenuOption(getString(R.string.game_menu_cancel), null));
-
-        showMenuDialog(getString(R.string.game_menu_send_keys), options.toArray(new MenuOption[options.size()]));
+        showMenuDialog(getString(R.string.game_menu_send_keys), options.toArray(new MenuOption[options.size()]),
+                () -> showAdvancedMenu(device));
     }
 
     private void showAdvancedMenu(GameInputDevice device) {
@@ -258,20 +304,18 @@ public class GameMenu implements Game.GameMenuCallbacks {
         options.add(new MenuOption(getString(R.string.game_menu_task_manager), true, () -> sendKeys(new short[]{KeyboardTranslator.VK_LCONTROL, KeyboardTranslator.VK_LSHIFT, KeyboardTranslator.VK_ESCAPE})));
 
         // **FIXED:** This is a UI navigation action, so it should not use withGameFocus.
-        options.add(new MenuOption(getString(R.string.game_menu_send_keys), () -> {
-            hideMenu();
-            showSpecialKeysMenu();
-        }));
+        options.add(new MenuOption(getString(R.string.game_menu_send_keys),
+                () -> showSpecialKeysMenu(device)).submenu());
 
         options.add(new MenuOption(getString(R.string.game_menu_switch_touch_sensitivity_model), true, game::switchTouchSensitivity));
         if (device != null) {
             options.addAll(device.getGameMenuOptions());
         }
-        options.add(new MenuOption(getString(R.string.game_menu_cancel), null));
-        showMenuDialog(getString(R.string.game_menu_advanced), options.toArray(new MenuOption[options.size()]));
+        showMenuDialog(getString(R.string.game_menu_advanced), options.toArray(new MenuOption[options.size()]),
+                () -> showMenu(device));
     }
 
-    private void showServerCmd(ArrayList<String> serverCmds) {
+    private void showServerCmd(ArrayList<String> serverCmds, GameInputDevice device) {
         List<MenuOption> options = new ArrayList<>();
 
         AtomicInteger index = new AtomicInteger(0);
@@ -280,28 +324,33 @@ public class GameMenu implements Game.GameMenuCallbacks {
             options.add(new MenuOption("> " + str, true, () -> game.sendExecServerCmd(finalI)));
         };
 
-        options.add(new MenuOption(getString(R.string.game_menu_cancel), null));
-
-        showMenuDialog(getString(R.string.game_menu_server_cmd), options.toArray(new MenuOption[options.size()]));
+        showMenuDialog(getString(R.string.game_menu_server_cmd), options.toArray(new MenuOption[options.size()]),
+                () -> showMenu(device));
     }
 
     public void showMenu(GameInputDevice device) {
         List<MenuOption> options = new ArrayList<>();
 
-        options.add(new MenuOption(getString(R.string.game_menu_disconnect), game::disconnect));
+        options.add(new MenuOption(getString(R.string.game_menu_disconnect), game::disconnect)
+                .icon(R.drawable.ic_game_disconnect));
 
-        options.add(new MenuOption(getString(R.string.game_menu_quit_session), game::quit));
+        options.add(new MenuOption(getString(R.string.game_menu_quit_session), game::quit)
+                .icon(R.drawable.ic_game_quit));
+
+        options.add(new MenuOption(getString(R.string.game_menu_toggle_keyboard), true,
+                game::toggleKeyboard).icon(R.drawable.ic_settings_keys));
 
         options.add(new MenuOption(getString(R.string.game_menu_upload_clipboard), true,
-                () -> game.sendClipboard(true)));
+                () -> game.sendClipboard(true)).icon(R.drawable.ic_game_clipboard));
 
         options.add(new MenuOption(getString(R.string.game_menu_fetch_clipboard), true,
-                () -> game.getClipboard(0)));
+                () -> game.getClipboard(0)).icon(R.drawable.ic_game_clipboard));
 
-        options.add(new MenuOption(getString(R.string.game_menu_server_cmd), true,
+        options.add(new MenuOption(getString(R.string.game_menu_server_cmd),
                 () -> {
                     ArrayList<String> serverCmds = game.getServerCmds();
                     if (serverCmds.isEmpty()) {
+                        hideMenu();
                         int themeResId = game.getApplicationInfo().theme;
                         Context themedContext = new ContextThemeWrapper(dialogScreenContext, themeResId);
                         new AlertDialog.Builder(themedContext)
@@ -309,28 +358,22 @@ public class GameMenu implements Game.GameMenuCallbacks {
                                 .setMessage(R.string.game_dialog_message_server_cmd_empty)
                                 .show();
                     } else {
-                        hideMenu();
-                        this.showServerCmd(serverCmds);
+                        this.showServerCmd(serverCmds, device);
                     }
-                }));
-
-        options.add(new MenuOption(getString(R.string.game_menu_toggle_keyboard), true,
-                game::toggleKeyboard));
+                }).icon(R.drawable.ic_game_command).submenu());
 
         options.add(new MenuOption(getString(game.isZoomModeEnabled() ? R.string.game_menu_disable_zoom_mode : R.string.game_menu_enable_zoom_mode), true,
-                game::toggleZoomMode));
+                game::toggleZoomMode).icon(R.drawable.ic_game_zoom));
 
         if (dialogScreenContext == game) {
             options.add(new MenuOption(getString(R.string.game_menu_rotate_screen), true,
-                    game::rotateScreen));
+                    game::rotateScreen).icon(R.drawable.ic_game_rotate));
         }
 
-        options.add(new MenuOption(getString(R.string.game_menu_advanced), true,
-                () -> showAdvancedMenu(device)));
+        options.add(new MenuOption(getString(R.string.game_menu_advanced),
+                () -> showAdvancedMenu(device)).icon(R.drawable.ic_settings_advanced).submenu());
 
-        options.add(new MenuOption(getString(R.string.game_menu_cancel), null));
-
-        showMenuDialog(getString(R.string.quick_menu_title), options.toArray(new MenuOption[options.size()]));
+        showMenuDialog(getString(R.string.quick_menu_title), options.toArray(new MenuOption[options.size()]), null);
     }
 
     @Override

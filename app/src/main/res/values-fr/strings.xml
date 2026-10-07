@@ -603,4 +603,6 @@
     <string name="title_checkbox_remember_zoom_pan">Mémoriser le zoom et le panoramique</string>
     <string name="summary_checkbox_remember_zoom_pan">Enregistre la position de zoom et de panoramique entre les sessions.</string>
     <string name="title_edit_profile">Modifier le profil</string>
+    <string name="game_panel_hint_close">Retour pour revenir au jeu</string>
+    <string name="game_panel_hint_up">Retour pour revenir au menu précédent</string>
 </resources>
