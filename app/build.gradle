@@ -93,8 +93,21 @@ android {
         }
     }
 
+    signingConfigs {
+        // Shared debug key kept in the repo, so every Vega build (local or CI) has the
+        // same signature and installs over the previous one with `adb install -r`,
+        // keeping paired hosts. It only signs debug builds and is not a secret.
+        debug {
+            storeFile file('ariane-debug.keystore')
+            storePassword 'android'
+            keyAlias 'androiddebugkey'
+            keyPassword 'android'
+        }
+    }
+
     buildTypes {
         debug {
+            signingConfig signingConfigs.debug
             applicationIdSuffix ".noirdebug"
             resValue "string", "app_label", "Vega"
             resValue "string", "app_label_root", "Vega (Root)"
