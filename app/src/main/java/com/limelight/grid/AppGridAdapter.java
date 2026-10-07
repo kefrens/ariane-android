@@ -29,7 +29,7 @@ import java.util.Set;
 public class AppGridAdapter extends GenericGridAdapter<AppView.AppObject> {
     private static final int ART_WIDTH_PX = 300;
     private static final int SMALL_WIDTH_DP = 110;
-    private static final int LARGE_WIDTH_DP = 170;
+    private static final int LARGE_WIDTH_DP = 152;
 
     private final ComputerDetails computer;
     private final String uniqueId;
@@ -171,6 +171,12 @@ public class AppGridAdapter extends GenericGridAdapter<AppView.AppObject> {
     public void populateView(View parentView, ImageView imgView, RelativeLayout gridMask, ProgressBar prgView, TextView txtView, ImageView overlayView, AppView.AppObject obj) {
         // Let the cached asset loader handle it
         loader.populateImageView(obj.app, imgView, txtView);
+
+        // The poster layout names every app under its art
+        TextView titleView = parentView.findViewById(R.id.grid_title);
+        if (titleView != null) {
+            titleView.setText(obj.app.getAppName());
+        }
 
         if (obj.isRunning) {
             // Show the play button overlay

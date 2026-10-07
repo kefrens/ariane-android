@@ -117,6 +117,11 @@
     <string name="title_details">Détails</string>
     <string name="help">Aide</string>
     <string name="settings">Paramètres</string>
+    <string name="home_hosts">Hôtes</string>
+    <string name="applist_running_now">En cours</string>
+    <string name="applist_resume">Reprendre</string>
+    <string name="applist_quit">Quitter le jeu</string>
+    <string name="applist_all_apps">Tous les jeux</string>
     <string name="delete_pc_msg">Êtes-vous sûr de vouloir supprimer ce PC ?</string>
     <string name="slow_connection_msg">Connexion lente au PC\nRéduisez votre débit</string>
     <string name="poor_connection_msg">Mauvaise connexion au PC</string>

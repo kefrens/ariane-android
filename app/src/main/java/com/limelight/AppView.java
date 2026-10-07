@@ -555,24 +555,7 @@ public class AppView extends AppCompatActivity implements AdapterFragmentCallbac
             }
 
             case QUIT_ID: {
-                // Display a confirmation dialog first
-                UiHelper.displayQuitConfirmationDialog(this, new Runnable() {
-                    @Override
-                    public void run() {
-                        suspendGridUpdates = true;
-                        ServerHelper.doQuit(AppView.this, computer,
-                                app.app, managerBinder, new Runnable() {
-                                    @Override
-                                    public void run() {
-                                        // Trigger a poll immediately
-                                        suspendGridUpdates = false;
-                                        if (poller != null) {
-                                            poller.pollNow();
-                                        }
-                                    }
-                                });
-                    }
-                }, null);
+                confirmQuit(app);
                 return true;
             }
 
@@ -630,7 +613,6 @@ public class AppView extends AppCompatActivity implements AdapterFragmentCallbac
             @Override
             public void run() {
                 boolean updated = false;
-                int newlyRunning = -1;
 
                     // Look through our current app list to tag the running app
                 for (int i = 0; i < appGridAdapter.getCount(); i++) {
@@ -645,7 +627,6 @@ public class AppView extends AppCompatActivity implements AdapterFragmentCallbac
                     else if (existingApp.app.getAppId() == details.runningGameId) {
                         // This app wasn't running but now is
                         existingApp.isRunning = true;
-                        newlyRunning = i;
                         updated = true;
                     }
                     else if (existingApp.isRunning) {
@@ -662,10 +643,7 @@ public class AppView extends AppCompatActivity implements AdapterFragmentCallbac
                     appGridAdapter.notifyDataSetChanged();
                 }
 
-                // With a remote, put focus on the running game so one press of OK resumes it
-                if (newlyRunning >= 0 && appListView != null && !appListView.isInTouchMode()) {
-                    appListView.setSelection(newlyRunning);
-                }
+                updateRunningBanner();
             }
         });
     }
@@ -742,6 +720,70 @@ public class AppView extends AppCompatActivity implements AdapterFragmentCallbac
                 }
             }
         });
+    }
+
+    private void confirmQuit(final AppObject app) {
+        // Display a confirmation dialog first
+        UiHelper.displayQuitConfirmationDialog(this, new Runnable() {
+            @Override
+            public void run() {
+                suspendGridUpdates = true;
+                ServerHelper.doQuit(AppView.this, computer,
+                        app.app, managerBinder, new Runnable() {
+                            @Override
+                            public void run() {
+                                // Trigger a poll immediately
+                                suspendGridUpdates = false;
+                                if (poller != null) {
+                                    poller.pollNow();
+                                }
+                            }
+                        });
+            }
+        }, null);
+    }
+
+    // Shows the running game above the posters. With a remote, Resume takes focus
+    // when the banner appears, so one press of OK goes back into the game.
+    private void updateRunningBanner() {
+        View banner = findViewById(R.id.runningBanner);
+        if (banner == null) {
+            return;
+        }
+
+        AppObject running = null;
+        for (int i = 0; i < appGridAdapter.getCount(); i++) {
+            AppObject app = (AppObject) appGridAdapter.getItem(i);
+            if (app.isRunning) {
+                running = app;
+                break;
+            }
+        }
+
+        if (running == null) {
+            boolean hadFocus = banner.hasFocus();
+            banner.setVisibility(View.GONE);
+            if (hadFocus && appListView != null) {
+                appListView.requestFocus();
+            }
+            return;
+        }
+
+        final AppObject runningApp = running;
+        boolean wasHidden = banner.getVisibility() != View.VISIBLE;
+
+        TextView nameView = findViewById(R.id.runningAppName);
+        nameView.setText(runningApp.app.getAppName());
+
+        View resumeButton = findViewById(R.id.runningResume);
+        resumeButton.setOnClickListener(v ->
+                ServerHelper.doStart(AppView.this, runningApp.app, computer, managerBinder, false));
+        findViewById(R.id.runningQuit).setOnClickListener(v -> confirmQuit(runningApp));
+
+        banner.setVisibility(View.VISIBLE);
+        if (wasHidden && !banner.isInTouchMode()) {
+            resumeButton.requestFocus();
+        }
     }
 
     @Override

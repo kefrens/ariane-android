@@ -919,6 +919,7 @@ public class PcView extends AppCompatActivity implements AdapterFragmentCallback
         });
         UiHelper.applyStatusBarPadding(listView);
         registerForContextMenu(listView);
+        listView.requestFocus();
     }
 
     public static class ComputerObject {
