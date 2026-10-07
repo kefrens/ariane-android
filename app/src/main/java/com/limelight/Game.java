@@ -80,6 +80,7 @@ import android.net.wifi.WifiManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.HandlerThread;
 import android.os.IBinder;
 import android.os.PersistableBundle;
 import android.os.VibrationEffect;
@@ -187,7 +188,8 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
     private SpinnerDialog spinner;
     private boolean displayedFailureDialog = false;
     private boolean connecting = false;
-    public boolean connected = false;
+    // Volatile because the packet-loss ping reads it from its own thread
+    public volatile boolean connected = false;
     private boolean autoEnterPip = false;
     private boolean surfaceCreated = false;
     private boolean attemptedConnection = false;
@@ -330,12 +332,37 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
         }
     };
 
+    // The anti-packet-loss ping runs 50 times a second, so it gets its own thread
+    // instead of competing with input and drawing on the UI thread
+    private HandlerThread pingThread;
+    private Handler pingHandler;
+
     private final Runnable backgroundPing = () -> {
-        if (connected) {
-            timerHandler.postDelayed(Game.this.backgroundPing, 20);
+        Handler handler = pingHandler;
+        if (connected && handler != null) {
+            handler.postDelayed(Game.this.backgroundPing, 20);
             MoonBridge.sendEmptyPayload();
         }
     };
+
+    private void startBackgroundPing() {
+        stopBackgroundPing();
+        pingThread = new HandlerThread("PacketLossPing");
+        pingThread.start();
+        pingHandler = new Handler(pingThread.getLooper());
+        pingHandler.postDelayed(backgroundPing, 1000);
+    }
+
+    private void stopBackgroundPing() {
+        if (pingHandler != null) {
+            pingHandler.removeCallbacksAndMessages(null);
+            pingHandler = null;
+        }
+        if (pingThread != null) {
+            pingThread.quitSafely();
+            pingThread = null;
+        }
+    }
 
     @SuppressLint({"MissingInflatedId", "ClickableViewAccessibility"})
     @Override
@@ -1702,6 +1729,7 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
 
         instance = null;
         timerHandler.removeCallbacksAndMessages(null);
+        stopBackgroundPing();
 
         if (prefConfig.enableFullExDisplay) handleDisplayRemoved();
 
@@ -3573,6 +3601,7 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
                 // Stop processing controller input
                 controllerHandler.stop();
                 timerHandler.removeCallbacksAndMessages(null);
+                stopBackgroundPing();
 
                 // Ungrab input
                 setInputGrabState(false);
@@ -3712,7 +3741,7 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
                 hideSystemUi(1000);
 
                 if (prefConfig.preventPacketLoss) {
-                    timerHandler.postDelayed(backgroundPing, 1000);
+                    startBackgroundPing();
                 }
             }
         });
