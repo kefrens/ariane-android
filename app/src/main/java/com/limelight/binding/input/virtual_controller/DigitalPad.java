@@ -17,7 +17,6 @@ import android.view.MotionEvent;
 
 import com.limelight.LimeLog;
 import com.limelight.R;
-import com.limelight.preferences.PreferenceConfiguration;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -53,8 +52,8 @@ public class DigitalPad extends VirtualControllerElement {
         paint.setTextAlign(Paint.Align.CENTER);
         paint.setStrokeWidth(getDefaultStrokeWidth());
         //虚拟手柄皮肤 yuzu
-        if(!PreferenceConfiguration.readPreferences(getContext()).enableOnScreenStyleOfficial) {
-            int oscOpacity=PreferenceConfiguration.readPreferences(getContext()).oscOpacity;
+        if(!virtualController.getPreferences().enableOnScreenStyleOfficial) {
+            int oscOpacity=virtualController.getPreferences().oscOpacity;
 
             paint.setColor(isPressed() ? pressedColor:getDefaultColor());
             rect.left = rect.top = paint.getStrokeWidth();

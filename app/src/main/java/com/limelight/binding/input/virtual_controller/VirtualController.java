@@ -70,12 +70,17 @@ public class VirtualController {
 
     private final VibrationEffect defaultVibrationEffect;
 
+    // Settings snapshot for the hot input and draw paths. Reading preferences parses every
+    // setting, so it is done once here and again whenever the layout is rebuilt.
+    private PreferenceConfiguration prefConfig;
+
     public VirtualController(final ControllerHandler controllerHandler, FrameLayout layout, final Context context) {
         this.controllerHandler = controllerHandler;
         this.frame_layout = layout;
         this.context = context;
         this.handler = new Handler(Looper.getMainLooper());
 
+        this.prefConfig = PreferenceConfiguration.readPreferences(context);
         this.vibrator = (Vibrator) context.getSystemService(Context.VIBRATOR_SERVICE);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             defaultVibrationEffect = VibrationEffect.createOneShot(10, VibrationEffect.DEFAULT_AMPLITUDE);
@@ -197,6 +202,7 @@ public class VirtualController {
 
     public void refreshLayout() {
         removeElements();
+        prefConfig = PreferenceConfiguration.readPreferences(context);
 
         DisplayMetrics screen = context.getResources().getDisplayMetrics();
 
@@ -221,12 +227,18 @@ public class VirtualController {
         return inputContext;
     }
 
+    PreferenceConfiguration getPreferences() {
+        return prefConfig;
+    }
+
     private void sendControllerInputContextInternal() {
-        _DBG("INPUT_MAP + " + inputContext.inputMap);
-        _DBG("LEFT_TRIGGER " + inputContext.leftTrigger);
-        _DBG("RIGHT_TRIGGER " + inputContext.rightTrigger);
-        _DBG("LEFT STICK X: " + inputContext.leftStickX + " Y: " + inputContext.leftStickY);
-        _DBG("RIGHT STICK X: " + inputContext.rightStickX + " Y: " + inputContext.rightStickY);
+        if (_PRINT_DEBUG_INFORMATION) {
+            _DBG("INPUT_MAP + " + inputContext.inputMap);
+            _DBG("LEFT_TRIGGER " + inputContext.leftTrigger);
+            _DBG("RIGHT_TRIGGER " + inputContext.rightTrigger);
+            _DBG("LEFT STICK X: " + inputContext.leftStickX + " Y: " + inputContext.leftStickY);
+            _DBG("RIGHT STICK X: " + inputContext.rightStickX + " Y: " + inputContext.rightStickY);
+        }
 
         if (controllerHandler != null) {
             controllerHandler.reportOscState(
@@ -246,7 +258,7 @@ public class VirtualController {
         handler.removeCallbacks(delayedRetransmitRunnable);
 
         sendControllerInputContextInternal();
-        if (frame_layout != null && PreferenceConfiguration.readPreferences(context).enableKeyboardVibrate) {
+        if (frame_layout != null && prefConfig.enableKeyboardVibrate) {
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
                 VibrationEffect effect;
                 if (vibrationDuration == 0) {
