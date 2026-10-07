@@ -740,62 +740,15 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
             Toast.makeText(this, "No AV1 decoder found", Toast.LENGTH_LONG).show();
         }
 
-        // H.264 is always supported
-        int supportedVideoFormats = MoonBridge.VIDEO_FORMAT_H264;
-        if (decoderRenderer.isHevcSupported()) {
-            supportedVideoFormats |= MoonBridge.VIDEO_FORMAT_H265;
-            if (willStreamHdr && decoderRenderer.isHevcMain10Hdr10Supported()) {
-                supportedVideoFormats |= MoonBridge.VIDEO_FORMAT_H265_MAIN10;
-            }
-        }
-        if (decoderRenderer.isAv1Supported()) {
-            supportedVideoFormats |= MoonBridge.VIDEO_FORMAT_AV1_MAIN8;
-            if (willStreamHdr && decoderRenderer.isAv1Main10Supported()) {
-                supportedVideoFormats |= MoonBridge.VIDEO_FORMAT_AV1_MAIN10;
-            }
-        }
-
-        int gamepadMask = ControllerHandler.getAttachedControllerMask(this);
-        if (!prefConfig.multiController) {
-            // Always set gamepad 1 present for when multi-controller is
-            // disabled for games that don't properly support detection
-            // of gamepads removed and replugged at runtime.
-            gamepadMask = 1;
-        }
-        if (prefConfig.onscreenController) {
-            // If we're using OSC, always set at least gamepad 1.
-            gamepadMask |= 1;
-        }
+        int supportedVideoFormats = StreamSetup.supportedVideoFormats(decoderRenderer, willStreamHdr);
+        int gamepadMask = StreamSetup.gamepadMask(ControllerHandler.getAttachedControllerMask(this),
+                prefConfig.multiController, prefConfig.onscreenController);
 
         // Set to the optimal mode for streaming
         float displayRefreshRate = prepareDisplayForRendering(currentDisplay);
         LimeLog.info("Display refresh rate: "+displayRefreshRate);
 
-        // If the user requested frame pacing using a capped FPS, we will need to change our
-        // desired FPS setting here in accordance with the active display refresh rate.
-        int roundedRefreshRate = Math.round(displayRefreshRate);
-        float chosenFrameRate = prefConfig.fps;
-        if (prefConfig.framePacing == PreferenceConfiguration.FRAME_PACING_CAP_FPS) {
-            if (prefConfig.fps >= roundedRefreshRate) {
-                if (prefConfig.fps > roundedRefreshRate + 3) {
-                    // Use frame drops when rendering above the screen frame rate
-                    prefConfig.framePacing = PreferenceConfiguration.FRAME_PACING_BALANCED;
-                    LimeLog.info("Using drop mode for FPS > Hz");
-                } else if (roundedRefreshRate <= 49) {
-                    // Let's avoid clearly bogus refresh rates and fall back to legacy rendering
-                    prefConfig.framePacing = PreferenceConfiguration.FRAME_PACING_BALANCED;
-                    LimeLog.info("Bogus refresh rate: " + roundedRefreshRate);
-                }
-                else {
-                    chosenFrameRate = roundedRefreshRate - 1;
-                    LimeLog.info("Adjusting FPS target for screen to " + chosenFrameRate);
-                }
-            }
-        }
-
-        if (prefConfig.framePacingWarpFactor > 0) {
-            chosenFrameRate *= prefConfig.framePacingWarpFactor;
-        }
+        float chosenFrameRate = StreamSetup.chooseFrameRate(prefConfig, displayRefreshRate);
 
         StreamConfiguration config = new StreamConfiguration.Builder()
                 .setResolution(
@@ -3329,7 +3282,7 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
         // This does network I/O, so don't do it on the main thread.
         final int portTestResult = MoonBridge.testClientConnectivity(ServerHelper.CONNECTION_TEST_SERVER, 443, portFlags);
 
-        if (errorCode == 0 && portFlags != 0 && (portTestResult == MoonBridge.ML_TEST_RESULT_INCONCLUSIVE || portTestResult == 0)) {
+        if (ConnectionErrors.mayStillBeStarting(errorCode, portFlags, portTestResult)) {
             spinner.setMessage(getResources().getString(R.string.unlocking_or_starting));
             return true;
         }
@@ -3352,30 +3305,8 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
                         Toast.makeText(Game.this, getResources().getText(R.string.video_decoder_init_failed), Toast.LENGTH_LONG).show();
                     }
 
-                    String dialogText = getResources().getString(R.string.conn_error_msg) + " " + stage +" (error "+errorCode+")";
-
-                    switch (errorCode) {
-                        case 403: {
-                            dialogText += "\n\n" + getResources().getString(R.string.error_msg_permission_denied) + " (" + getResources().getString(R.string.permission_launch_app) + ")";
-                            break;
-                        }
-                        case -408: {
-                            dialogText += "\n\n" + getResources().getString(R.string.error_msg_timeout);
-                            break;
-                        }
-                        default: {
-                            // do nothing
-                        }
-                    }
-
-                    if (portFlags != 0) {
-                        dialogText += "\n\n" + getResources().getString(R.string.check_ports_msg) + "\n" +
-                                MoonBridge.stringifyPortFlags(portFlags, "\n");
-                    }
-
-                    if (portTestResult != MoonBridge.ML_TEST_RESULT_INCONCLUSIVE && portTestResult != 0)  {
-                        dialogText += "\n\n" + getResources().getString(R.string.nettest_text_blocked);
-                    }
+                    String dialogText = ConnectionErrors.stageFailedMessage(getResources(),
+                            stage, errorCode, portFlags, portTestResult);
 
                     Dialog.displayDialog(Game.this, getResources().getString(R.string.conn_error_title), dialogText, true);
                     finishSecondScreen();
@@ -3428,50 +3359,8 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
                     // Display the error dialog if it was an unexpected termination.
                     // Otherwise, just finish the activity immediately.
                     if (errorCode != MoonBridge.ML_ERROR_GRACEFUL_TERMINATION) {
-                        String message;
-
-                        if (portTestResult != MoonBridge.ML_TEST_RESULT_INCONCLUSIVE && portTestResult != 0) {
-                            // If we got a blocked result, that supersedes any other error message
-                            message = getResources().getString(R.string.nettest_text_blocked);
-                        }
-                        else {
-                            switch (errorCode) {
-                                case MoonBridge.ML_ERROR_NO_VIDEO_TRAFFIC:
-                                    message = getResources().getString(R.string.no_video_received_error);
-                                    break;
-
-                                case MoonBridge.ML_ERROR_NO_VIDEO_FRAME:
-                                    message = getResources().getString(R.string.no_frame_received_error);
-                                    break;
-
-                                case MoonBridge.ML_ERROR_UNEXPECTED_EARLY_TERMINATION:
-                                case MoonBridge.ML_ERROR_PROTECTED_CONTENT:
-                                    message = getResources().getString(R.string.early_termination_error);
-                                    break;
-
-                                case MoonBridge.ML_ERROR_FRAME_CONVERSION:
-                                    message = getResources().getString(R.string.frame_conversion_error);
-                                    break;
-
-                                default:
-                                    String errorCodeString;
-                                    // We'll assume large errors are hex values
-                                    if (Math.abs(errorCode) > 1000) {
-                                        errorCodeString = Integer.toHexString(errorCode);
-                                    }
-                                    else {
-                                        errorCodeString = Integer.toString(errorCode);
-                                    }
-                                    message = getResources().getString(R.string.conn_terminated_msg) + "\n\n" +
-                                            getResources().getString(R.string.error_code_prefix) + " " + errorCodeString;
-                                    break;
-                            }
-                        }
-
-                        if (portFlags != 0) {
-                            message += "\n\n" + getResources().getString(R.string.check_ports_msg) + "\n" +
-                                    MoonBridge.stringifyPortFlags(portFlags, "\n");
-                        }
+                        String message = ConnectionErrors.terminatedMessage(getResources(),
+                                errorCode, portFlags, portTestResult);
 
                         Dialog.displayDialog(Game.this, getResources().getString(R.string.conn_terminated_title),
                                 message, true);
