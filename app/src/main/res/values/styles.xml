@@ -88,7 +88,7 @@
         <item name="android:windowAnimationStyle">@style/Ariane.SidePanelAnimation</item>
     </style>
 
-    <style name="Ariane.SidePanelAnimation">
+    <style name="Ariane.SidePanelAnimation" parent="@android:style/Animation">
         <item name="android:windowEnterAnimation">@anim/side_panel_in</item>
         <item name="android:windowExitAnimation">@anim/side_panel_out</item>
     </style>
