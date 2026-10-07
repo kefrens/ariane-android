@@ -117,6 +117,7 @@
     <string name="title_details">Détails</string>
     <string name="help">Aide</string>
     <string name="settings">Paramètres</string>
+    <string name="settings_profile_line">Profil : %1$s</string>
     <string name="home_hosts">Hôtes</string>
     <string name="applist_running_now">En cours</string>
     <string name="applist_resume">Reprendre</string>

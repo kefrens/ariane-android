@@ -9,7 +9,7 @@
         android:title="@string/category_video_settings"
         app:initialExpandedChildrenCount="3"
         app:iconSpaceReserved="false">
-        <ListPreference
+        <com.limelight.preferences.InlineListPreference
             android:defaultValue="1280x720"
             android:entries="@array/resolution_names"
             android:entryValues="@array/resolution_values"
@@ -17,7 +17,7 @@
             android:summary="@string/summary_resolution_list"
             android:title="@string/title_resolution_list"
             app:iconSpaceReserved="false" />
-        <ListPreference
+        <com.limelight.preferences.InlineListPreference
             android:defaultValue="60"
             android:entries="@array/fps_names"
             android:entryValues="@array/fps_values"
@@ -50,7 +50,7 @@
             seekbar:min="0"
             seekbar:step="500" />
 
-        <ListPreference
+        <com.limelight.preferences.InlineListPreference
             android:defaultValue="latency"
             android:entries="@array/video_frame_pacing_names"
             android:entryValues="@array/video_frame_pacing_values"
@@ -120,7 +120,7 @@
             seekbar:min="20"
             seekbar:step="1" />
 
-        <ListPreference
+        <com.limelight.preferences.InlineListPreference
             android:defaultValue="fit"
             android:entries="@array/video_scale_mode_names"
             android:entryValues="@array/video_scale_mode_values"
@@ -163,7 +163,7 @@
             android:summary="@string/summary_checkbox_enforce_display_mode"
             android:title="@string/title_checkbox_enforce_display_mode"
             app:iconSpaceReserved="false" />
-        <ListPreference
+        <com.limelight.preferences.InlineListPreference
             android:defaultValue="0"
             android:entries="@array/render_mode_names"
             android:entryValues="@array/render_mode_values"
@@ -220,9 +220,10 @@
     </PreferenceCategory>
 
     <PreferenceCategory
+        android:key="category_audio_settings"
         android:title="@string/category_audio_settings"
         app:iconSpaceReserved="false">
-        <ListPreference
+        <com.limelight.preferences.InlineListPreference
             android:defaultValue="2"
             android:entries="@array/audio_config_names"
             android:entryValues="@array/audio_config_values"
@@ -277,7 +278,7 @@
             android:summary="@string/summary_checkbox_mouse_emulation"
             android:title="@string/title_checkbox_mouse_emulation"
             app:iconSpaceReserved="false" />
-        <ListPreference
+        <com.limelight.preferences.InlineListPreference
             android:defaultValue="right"
             android:dependency="checkbox_mouse_emulation"
             android:entries="@array/analog_scrolling_names"
@@ -365,7 +366,7 @@
         android:title="@string/category_input_settings"
         app:initialExpandedChildrenCount="1"
         app:iconSpaceReserved="false">
-        <ListPreference
+        <com.limelight.preferences.InlineListPreference
             android:defaultValue="0"
             android:entries="@array/mouse_mode_names"
             android:entryValues="@array/mouse_mode_values"
@@ -489,6 +490,7 @@
     </PreferenceCategory>
 
     <PreferenceCategory
+        android:key="category_host_settings"
         android:title="@string/category_host_settings"
         app:iconSpaceReserved="false">
         <CheckBoxPreference
@@ -506,6 +508,7 @@
     </PreferenceCategory>
 
     <PreferenceCategory
+        android:key="category_general_settings"
         android:title="@string/category_general_settings"
         app:initialExpandedChildrenCount="1"
         app:iconSpaceReserved="false">
@@ -598,7 +601,7 @@
             android:title="@string/title_onscreen_keyboard_width"
             app:iconSpaceReserved="false"
             seekbar:step="10" />
-        <ListPreference
+        <com.limelight.preferences.InlineListPreference
             android:defaultValue="center"
             android:entries="@array/onscreen_keyboard_align_modes"
             android:entryValues="@array/onscreen_keyboard_align_values"
@@ -768,7 +771,7 @@
             android:title="@string/title_checkbox_vibrate_osc"
             app:iconSpaceReserved="false" />
 
-        <ListPreference
+        <com.limelight.preferences.InlineListPreference
             android:defaultValue="OSC_Keyboard"
             android:dependency="checkbox_enable_keyboard"
             android:entries="@array/keyboard_axi_names"
@@ -947,7 +950,7 @@
         android:title="@string/category_advanced_settings"
         app:initialExpandedChildrenCount="1"
         app:iconSpaceReserved="false">
-        <ListPreference
+        <com.limelight.preferences.InlineListPreference
             android:defaultValue="auto"
             android:entries="@array/video_format_names"
             android:entryValues="@array/video_format_values"

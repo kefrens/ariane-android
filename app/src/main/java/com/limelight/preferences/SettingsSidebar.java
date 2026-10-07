@@ -63,6 +63,11 @@ final class SettingsSidebar {
             return;
         }
 
+        // Rebind rows in place when a value changes, so focus stays on the row
+        if (fragment.getListView() != null) {
+            fragment.getListView().setItemAnimator(null);
+        }
+
         LayoutInflater inflater = LayoutInflater.from(container.getContext());
         for (int i = 0; i < screen.getPreferenceCount(); i++) {
             Preference pref = screen.getPreference(i);
@@ -76,6 +81,7 @@ final class SettingsSidebar {
 
             TextView item = (TextView) inflater.inflate(R.layout.settings_category_item, container, false);
             item.setText(category.getTitle());
+            item.setCompoundDrawablesRelativeWithIntrinsicBounds(iconFor(category.getKey()), 0, 0, 0);
             item.setTag(category);
             item.setOnClickListener(this::select);
             container.addView(item);
@@ -86,6 +92,39 @@ final class SettingsSidebar {
             View first = container.getChildAt(0);
             select(first);
             first.requestFocus();
+        }
+    }
+
+    private static int iconFor(String categoryKey) {
+        if (categoryKey == null) {
+            return R.drawable.ic_settings_more;
+        }
+        switch (categoryKey) {
+            case "category_video_settings":
+                return R.drawable.ic_settings_video;
+            case "category_audio_settings":
+                return R.drawable.ic_settings_audio;
+            case "category_gamepad_settings":
+                return R.drawable.ic_settings_gamepad;
+            case "category_input_settings":
+                return R.drawable.ic_settings_mouse;
+            case "category_host_settings":
+                return R.drawable.ic_settings_host;
+            case "category_general_settings":
+                return R.drawable.ic_settings_general;
+            case "category_ui_settings":
+                return R.drawable.ic_settings_appearance;
+            case "category_onscreen_controls":
+            case "category_virtual_trackpad_settings":
+                return R.drawable.ic_settings_touch;
+            case "category_special_key_layout":
+                return R.drawable.ic_settings_keys;
+            case "category_perf_monitor_settings":
+                return R.drawable.ic_settings_stats;
+            case "category_advanced_settings":
+                return R.drawable.ic_settings_advanced;
+            default:
+                return R.drawable.ic_settings_more;
         }
     }
 

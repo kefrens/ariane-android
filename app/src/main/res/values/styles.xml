@@ -72,7 +72,18 @@
     </style>
 
     <!-- Settings screens share the app theme on every API level -->
-    <style name="SettingsTheme" parent="AppTheme" />
+    <style name="SettingsTheme" parent="AppTheme">
+        <item name="preferenceTheme">@style/Ariane.PreferenceThemeOverlay</item>
+    </style>
+
+    <!-- On/off settings show a switch instead of a checkbox -->
+    <style name="Ariane.PreferenceThemeOverlay" parent="PreferenceThemeOverlay">
+        <item name="checkBoxPreferenceStyle">@style/Ariane.Preference.Switch</item>
+    </style>
+
+    <style name="Ariane.Preference.Switch" parent="Preference.CheckBoxPreference.Material">
+        <item name="android:widgetLayout">@layout/preference_widget_switch</item>
+    </style>
 
     <style name="ExternalDisplayControllerTheme" parent="AppTheme">
         <item name="android:statusBarColor">@android:color/black</item>

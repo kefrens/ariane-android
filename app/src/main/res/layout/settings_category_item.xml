@@ -4,6 +4,7 @@
     android:layout_height="wrap_content"
     android:layout_marginBottom="4dp"
     android:background="@drawable/settings_category_bg"
+    android:drawablePadding="16dp"
     android:clickable="true"
     android:ellipsize="end"
     android:focusable="true"

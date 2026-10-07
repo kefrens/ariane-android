@@ -41,6 +41,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowInsets;
 import android.widget.EditText;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.google.gson.Gson;
@@ -50,6 +51,7 @@ import com.limelight.GameMenu;
 import com.limelight.LimeLog;
 import com.limelight.PcView;
 import com.limelight.R;
+import com.limelight.profiles.ProfilesManager;
 import com.limelight.binding.input.virtual_controller.keyboard.KeyBoardControllerConfigurationLoader;
 import com.limelight.binding.video.MediaCodecHelper;
 import com.limelight.utils.Dialog;
@@ -101,6 +103,13 @@ public class StreamSettings extends AppCompatActivity {
         setContentView(R.layout.activity_stream_settings);
         getWindow().setBackgroundDrawableResource(R.drawable.tv_screen_bg);
         sidebar = SettingsSidebar.attach(this);
+
+        TextView profileLine = findViewById(R.id.settingsProfile);
+        String profileName = ProfilesManager.getInstance().getActiveName();
+        if (profileLine != null && profileName != null && !profileName.isEmpty()) {
+            profileLine.setText(getString(R.string.settings_profile_line, profileName));
+            profileLine.setVisibility(View.VISIBLE);
+        }
 
 //        UiHelper.notifyNewRootView(this);
     }
