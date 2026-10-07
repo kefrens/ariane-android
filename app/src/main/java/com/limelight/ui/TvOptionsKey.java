@@ -32,7 +32,7 @@ public final class TvOptionsKey {
         }
 
         if (event.getAction() == KeyEvent.ACTION_UP && !event.isCanceled()) {
-            activity.openContextMenu(selected);
+            ContextMenuPanel.show(activity, list, selected);
         }
         return true;
     }

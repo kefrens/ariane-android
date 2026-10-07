@@ -16,6 +16,7 @@ import com.limelight.nvstream.http.PairingManager;
 import com.limelight.preferences.PreferenceConfiguration;
 import com.limelight.profiles.ProfilesManager;
 import com.limelight.ui.AmbientBackgroundDrawable;
+import com.limelight.ui.ContextMenuPanel;
 import com.limelight.ui.AdapterFragment;
 import com.limelight.ui.AdapterFragmentCallbacks;
 import com.limelight.ui.DitherNoise;
@@ -870,7 +871,7 @@ public class AppView extends AppCompatActivity implements AdapterFragmentCallbac
                     if (prefConfig.resumeWithoutConfirm && lastRunningAppId == app.app.getAppId()) {
                         ServerHelper.doStart(AppView.this, app.app, computer, managerBinder, prefConfig.useVirtualDisplay);
                     } else {
-                        openContextMenu(arg1);
+                        ContextMenuPanel.show(AppView.this, (AbsListView) arg0, arg1);
                     }
                 } else {
                     if (prefConfig.useVirtualDisplay && !(computer.vDisplaySupported && computer.vDisplayDriverReady)) {
@@ -887,7 +888,10 @@ public class AppView extends AppCompatActivity implements AdapterFragmentCallbac
             }
         });
         UiHelper.applyStatusBarPadding(listView);
-        registerForContextMenu(listView);
+        listView.setOnItemLongClickListener((parent, view, position, id) -> {
+            ContextMenuPanel.show(this, (AbsListView) parent, view);
+            return true;
+        });
         listView.requestFocus();
     }
 

@@ -23,6 +23,7 @@ import com.limelight.preferences.PreferenceConfiguration;
 import com.limelight.preferences.StreamSettings;
 import com.limelight.profiles.ProfilesManager;
 import com.limelight.ui.AmbientBackgroundDrawable;
+import com.limelight.ui.ContextMenuPanel;
 import com.limelight.ui.AdapterFragment;
 import com.limelight.ui.AdapterFragmentCallbacks;
 import com.limelight.ui.TvOptionsKey;
@@ -910,7 +911,7 @@ public class PcView extends AppCompatActivity implements AdapterFragmentCallback
                 if (computer.details.state == ComputerDetails.State.UNKNOWN ||
                     computer.details.state == ComputerDetails.State.OFFLINE) {
                     // Open the context menu if a PC is offline or refreshing
-                    openContextMenu(arg1);
+                    ContextMenuPanel.show(PcView.this, (AbsListView) arg0, arg1);
                 } else if (computer.details.pairState != PairState.PAIRED) {
                     // Pair an unpaired machine by default
                     doPair(computer.details, null, null);
@@ -920,7 +921,10 @@ public class PcView extends AppCompatActivity implements AdapterFragmentCallback
             }
         });
         UiHelper.applyStatusBarPadding(listView);
-        registerForContextMenu(listView);
+        listView.setOnItemLongClickListener((parent, view, position, id) -> {
+            ContextMenuPanel.show(this, (AbsListView) parent, view);
+            return true;
+        });
         listView.requestFocus();
     }
 
