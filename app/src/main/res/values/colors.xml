@@ -31,4 +31,7 @@
     <color name="ariane_surface_container_high">#28323D</color>
     <color name="ariane_outline">#3A4552</color>
     <color name="ariane_outline_variant">#2A333D</color>
+
+    <!-- D-pad focus indicator: white reads on every dark surface at 10-foot distance -->
+    <color name="focus_ring">#FFFFFFFF</color>
 </resources>
