@@ -605,4 +605,6 @@
     <string name="title_edit_profile">Modifier le profil</string>
     <string name="game_panel_hint_close">Retour pour revenir au jeu</string>
     <string name="game_panel_hint_up">Retour pour revenir au menu précédent</string>
+    <string name="settings_search_hint">Rechercher un réglage</string>
+    <string name="settings_search_empty">Aucun réglage ne correspond à « %1$s »</string>
 </resources>

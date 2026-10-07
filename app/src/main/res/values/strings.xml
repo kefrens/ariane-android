@@ -757,4 +757,6 @@
     <string name="summary_checkbox_full_screen">Hide system bars with immersive mode</string>
     <string name="game_panel_hint_close">Back returns to the game</string>
     <string name="game_panel_hint_up">Back returns to the previous menu</string>
+    <string name="settings_search_hint">Search settings</string>
+    <string name="settings_search_empty">No setting matches “%1$s”</string>
 </resources>
