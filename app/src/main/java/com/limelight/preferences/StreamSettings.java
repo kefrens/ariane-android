@@ -102,7 +102,7 @@ public class StreamSettings extends AppCompatActivity {
         UiHelper.setLocale(this);
 
         setContentView(R.layout.activity_stream_settings);
-        getWindow().setBackgroundDrawable(new AmbientBackgroundDrawable(this));
+        AmbientBackgroundDrawable.install(this);
         sidebar = SettingsSidebar.attach(this);
 
         TextView profileLine = findViewById(R.id.settingsProfile);

@@ -1,5 +1,6 @@
 package com.limelight.ui;
 
+import android.app.Activity;
 import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Color;
@@ -27,9 +28,19 @@ public class AmbientBackgroundDrawable extends Drawable implements Runnable {
     private final int baseColor;
     private final int coolColor;
     private final int warmColor;
-    private final Paint coolPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Paint warmPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint coolPaint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.DITHER_FLAG);
+    private final Paint warmPaint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.DITHER_FLAG);
+    private final Paint grainPaint = DitherNoise.newPaint();
     private final long startMs = SystemClock.uptimeMillis();
+
+    /**
+     * Uses this background for the activity's window, on a full 8-bit-per-channel
+     * surface: some TVs default to RGB 565, where these gradients band badly.
+     */
+    public static void install(Activity activity) {
+        activity.getWindow().setFormat(PixelFormat.RGBA_8888);
+        activity.getWindow().setBackgroundDrawable(new AmbientBackgroundDrawable(activity));
+    }
 
     public AmbientBackgroundDrawable(Context context) {
         baseColor = context.getResources().getColor(R.color.ariane_background);
@@ -63,6 +74,8 @@ public class AmbientBackgroundDrawable extends Drawable implements Runnable {
                 warmColor, Color.TRANSPARENT, Shader.TileMode.CLAMP));
         canvas.drawRect(b, warmPaint);
 
+        canvas.drawRect(b, grainPaint);
+
         // Schedule the next frame only after drawing one, so nothing runs while hidden
         unscheduleSelf(this);
         scheduleSelf(this, SystemClock.uptimeMillis() + FRAME_MS);
@@ -85,6 +98,7 @@ public class AmbientBackgroundDrawable extends Drawable implements Runnable {
     public void setAlpha(int alpha) {
         coolPaint.setAlpha(alpha);
         warmPaint.setAlpha(alpha);
+        grainPaint.setAlpha(alpha);
     }
 
     @Override

@@ -143,7 +143,7 @@ public class PcView extends AppCompatActivity implements AdapterFragmentCallback
 
     private void initializeViews() {
         setContentView(R.layout.activity_pc_view);
-        getWindow().setBackgroundDrawable(new AmbientBackgroundDrawable(this));
+        AmbientBackgroundDrawable.install(this);
 
         UiHelper.notifyNewRootView(this);
 

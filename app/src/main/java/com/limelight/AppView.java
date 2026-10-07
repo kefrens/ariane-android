@@ -18,6 +18,7 @@ import com.limelight.profiles.ProfilesManager;
 import com.limelight.ui.AmbientBackgroundDrawable;
 import com.limelight.ui.AdapterFragment;
 import com.limelight.ui.AdapterFragmentCallbacks;
+import com.limelight.ui.DitherNoise;
 import com.limelight.ui.FocusHighlighter;
 import com.limelight.ui.TvOptionsKey;
 import com.limelight.utils.CacheHelper;
@@ -316,7 +317,7 @@ public class AppView extends AppCompatActivity implements AdapterFragmentCallbac
         UiHelper.setLocale(this);
 
         setContentView(R.layout.activity_app_view);
-        getWindow().setBackgroundDrawable(new AmbientBackgroundDrawable(this));
+        AmbientBackgroundDrawable.install(this);
 
         // Allow floating expanded PiP overlays while browsing apps
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -746,7 +747,8 @@ public class AppView extends AppCompatActivity implements AdapterFragmentCallbac
 
         Drawable next = new LayerDrawable(new Drawable[] {
                 new BitmapDrawable(getResources(), blurred),
-                getResources().getDrawable(R.drawable.tv_backdrop_scrim)
+                getResources().getDrawable(R.drawable.tv_backdrop_scrim),
+                DitherNoise.newDrawable()
         });
         Drawable previous = currentBackdrop != null ?
                 currentBackdrop : new AmbientBackgroundDrawable(this);
