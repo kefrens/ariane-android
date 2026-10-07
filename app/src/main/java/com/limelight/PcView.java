@@ -24,6 +24,7 @@ import com.limelight.preferences.StreamSettings;
 import com.limelight.profiles.ProfilesManager;
 import com.limelight.ui.AdapterFragment;
 import com.limelight.ui.AdapterFragmentCallbacks;
+import com.limelight.ui.TvOptionsKey;
 import com.limelight.utils.Dialog;
 import com.limelight.utils.HelpLauncher;
 import com.limelight.utils.ServerHelper;
@@ -47,6 +48,7 @@ import android.provider.Settings;
 import android.text.InputFilter;
 import android.text.InputType;
 import android.view.ContextMenu;
+import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -73,6 +75,7 @@ import javax.microedition.khronos.opengles.GL10;
 public class PcView extends AppCompatActivity implements AdapterFragmentCallbacks {
     private RelativeLayout noPcFoundLayout;
     private PcGridAdapter pcGridAdapter;
+    private AbsListView pcListView;
     private ShortcutHelper shortcutHelper;
     private ComputerManagerService.ComputerManagerBinder managerBinder;
     private boolean freezeUpdates, runningPolling, inForeground, completeOnCreateCalled;
@@ -883,12 +886,19 @@ public class PcView extends AppCompatActivity implements AdapterFragmentCallback
     }
 
     @Override
+    public boolean dispatchKeyEvent(KeyEvent event) {
+        // Menu key on the remote opens the focused host's options
+        return TvOptionsKey.handle(this, pcListView, event) || super.dispatchKeyEvent(event);
+    }
+
+    @Override
     public int getAdapterFragmentLayoutId() {
         return R.layout.pc_grid_view;
     }
 
     @Override
     public void receiveAbsListView(AbsListView listView) {
+        pcListView = listView;
         listView.setAdapter(pcGridAdapter);
         listView.setOnItemClickListener(new OnItemClickListener() {
             @Override

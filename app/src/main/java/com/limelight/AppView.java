@@ -17,6 +17,7 @@ import com.limelight.preferences.PreferenceConfiguration;
 import com.limelight.profiles.ProfilesManager;
 import com.limelight.ui.AdapterFragment;
 import com.limelight.ui.AdapterFragmentCallbacks;
+import com.limelight.ui.TvOptionsKey;
 import com.limelight.utils.CacheHelper;
 import com.limelight.utils.Dialog;
 import com.limelight.utils.ServerHelper;
@@ -38,6 +39,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.view.ContextMenu;
+import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -57,6 +59,7 @@ import org.xmlpull.v1.XmlPullParserException;
 
 public class AppView extends AppCompatActivity implements AdapterFragmentCallbacks {
     private AppGridAdapter appGridAdapter;
+    private AbsListView appListView;
     private String uuidString;
     private ShortcutHelper shortcutHelper;
 
@@ -627,6 +630,7 @@ public class AppView extends AppCompatActivity implements AdapterFragmentCallbac
             @Override
             public void run() {
                 boolean updated = false;
+                int newlyRunning = -1;
 
                     // Look through our current app list to tag the running app
                 for (int i = 0; i < appGridAdapter.getCount(); i++) {
@@ -641,6 +645,7 @@ public class AppView extends AppCompatActivity implements AdapterFragmentCallbac
                     else if (existingApp.app.getAppId() == details.runningGameId) {
                         // This app wasn't running but now is
                         existingApp.isRunning = true;
+                        newlyRunning = i;
                         updated = true;
                     }
                     else if (existingApp.isRunning) {
@@ -655,6 +660,11 @@ public class AppView extends AppCompatActivity implements AdapterFragmentCallbac
 
                 if (updated) {
                     appGridAdapter.notifyDataSetChanged();
+                }
+
+                // With a remote, put focus on the running game so one press of OK resumes it
+                if (newlyRunning >= 0 && appListView != null && !appListView.isInTouchMode()) {
+                    appListView.setSelection(newlyRunning);
                 }
             }
         });
@@ -735,6 +745,12 @@ public class AppView extends AppCompatActivity implements AdapterFragmentCallbac
     }
 
     @Override
+    public boolean dispatchKeyEvent(KeyEvent event) {
+        // Menu key on the remote opens the focused app's options
+        return TvOptionsKey.handle(this, appListView, event) || super.dispatchKeyEvent(event);
+    }
+
+    @Override
     public int getAdapterFragmentLayoutId() {
         return PreferenceConfiguration.readPreferences(AppView.this).smallIconMode ?
                     R.layout.app_grid_view_small : R.layout.app_grid_view;
@@ -742,6 +758,7 @@ public class AppView extends AppCompatActivity implements AdapterFragmentCallbac
 
     @Override
     public void receiveAbsListView(AbsListView listView) {
+        appListView = listView;
         listView.setAdapter(appGridAdapter);
         listView.setOnItemClickListener(new OnItemClickListener() {
             @Override

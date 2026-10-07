@@ -40,4 +40,15 @@
         android:gravity="center"
         android:textSize="18sp" >
     </TextView>
+    <TextView
+        android:id="@+id/grid_status"
+        android:layout_width="140dp"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/grid_text"
+        android:layout_marginTop="2dp"
+        android:layout_centerHorizontal="true"
+        android:gravity="center"
+        android:maxLines="2"
+        android:textColor="?android:attr/textColorSecondary"
+        android:textSize="14sp" />
 </RelativeLayout>

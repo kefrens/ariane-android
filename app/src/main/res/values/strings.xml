@@ -22,6 +22,11 @@
     <string name="align_right">Align Right</string>
 
     <!-- PC view menu entries -->
+    <string name="pcview_status_online">Online · Open apps</string>
+    <string name="pcview_status_in_game">In game · Open apps</string>
+    <string name="pcview_status_not_paired">Not paired · Pair</string>
+    <string name="pcview_status_offline">Offline · Wake</string>
+    <string name="pcview_status_checking">Checking…</string>
     <string name="pcview_menu_header_online">Online</string>
     <string name="pcview_menu_header_offline">Offline</string>
     <string name="pcview_menu_header_unknown">Refreshing</string>
