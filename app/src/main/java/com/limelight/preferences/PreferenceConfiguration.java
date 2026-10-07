@@ -34,10 +34,10 @@ public class PreferenceConfiguration {
     public static final String CUSTOM_REFRESH_RATE_PREF_STRING = "custom_refresh_rate";
     public static final String CUSTOM_RESOLUTION_PREF_STRING = "edit_diy_w_h";
 
-    private static final String LEGACY_RES_FPS_PREF_STRING = "list_resolution_fps";
-    private static final String LEGACY_ENABLE_51_SURROUND_PREF_STRING = "checkbox_51_surround";
-    private static final String LEGACY_STRETCH_PREF_STRING = "checkbox_stretch_video";
-    private static final String LEGACY_ENFORCE_REFRESH_RATE_STRING = "checkbox_enforce_refresh_rate";
+    static final String LEGACY_RES_FPS_PREF_STRING = "list_resolution_fps";
+    static final String LEGACY_ENABLE_51_SURROUND_PREF_STRING = "checkbox_51_surround";
+    static final String LEGACY_STRETCH_PREF_STRING = "checkbox_stretch_video";
+    static final String LEGACY_ENFORCE_REFRESH_RATE_STRING = "checkbox_enforce_refresh_rate";
 
     static final String RESOLUTION_PREF_STRING = "list_resolution";
     static final String FPS_PREF_STRING = "list_fps";
@@ -45,19 +45,19 @@ public class PreferenceConfiguration {
     private static final String BITRATE_PREF_OLD_STRING = "seekbar_bitrate";
     private static final String METERED_BITRATE_PREF_STRING = "seekbar_metered_bitrate_kbps";
     private static final String ENABLE_ULTRA_LOW_LATENCY_PREF_STRING = "checkbox_ultra_low_latency";
-    private static final String ENFORCE_DISPLAY_MODE_PREF_STRING = "checkbox_enforce_display_mode";
+    static final String ENFORCE_DISPLAY_MODE_PREF_STRING = "checkbox_enforce_display_mode";
     private static final String USE_VIRTUAL_DISPLAY_PREF_STRING = "checkbox_use_virtual_display";
     private static final String AUTO_INVERT_VIDEO_RESOLUTION_PREF_STRING = "checkbox_auto_invert_video_resolution";
     private static final String RESOLUTION_SCALE_FACTOR_PREF_STRING = "seekbar_resolution_scale_factor";
     private static final String RESUME_WITHOUT_CONFIRM_PREF_STRING = "checkbox_resume_without_confirm";
-    private static final String VIDEO_SCALE_MODE_PREF_STRING = "list_video_scale_mode";
+    static final String VIDEO_SCALE_MODE_PREF_STRING = "list_video_scale_mode";
     private static final String SOPS_PREF_STRING = "checkbox_enable_sops";
     private static final String DISABLE_TOASTS_PREF_STRING = "checkbox_disable_warnings";
     private static final String HOST_AUDIO_PREF_STRING = "checkbox_host_audio";
     private static final String DEADZONE_PREF_STRING = "seekbar_deadzone";
     private static final String OSC_OPACITY_PREF_STRING = "seekbar_osc_opacity";
     private static final String LANGUAGE_PREF_STRING = "list_languages";
-    private static final String SMALL_ICONS_PREF_STRING = "checkbox_small_icon_mode";
+    static final String SMALL_ICONS_PREF_STRING = "checkbox_small_icon_mode";
     private static final String MULTI_CONTROLLER_PREF_STRING = "checkbox_multi_controller";
     static final String AUDIO_CONFIG_PREF_STRING = "list_audio_config";
     private static final String USB_DRIVER_PREF_SRING = "checkbox_usb_driver";
@@ -90,7 +90,7 @@ public class PreferenceConfiguration {
     private static final String REDUCE_REFRESH_RATE_PREF_STRING = "checkbox_reduce_refresh_rate";
     private static final String FULL_RANGE_PREF_STRING = "checkbox_full_range";
     private static final String GAMEPAD_TOUCHPAD_AS_MOUSE_PREF_STRING = "checkbox_gamepad_touchpad_as_mouse";
-    private static final String GAMEPAD_MOTION_SENSORS_PREF_STRING = "checkbox_gamepad_motion_sensors";
+    static final String GAMEPAD_MOTION_SENSORS_PREF_STRING = "checkbox_gamepad_motion_sensors";
     private static final String GAMEPAD_MOTION_FALLBACK_PREF_STRING = "checkbox_gamepad_motion_fallback";
     private static final String FORCE_MOTION_SENSORS_FALLBACK_PREF_STRING = "checkbox_force_device_motion";
     private static final String FULL_SCREEN_PREF_STRING = "checkbox_full_screen";
@@ -444,7 +444,7 @@ public class PreferenceConfiguration {
         return isSquarishScreen(width, height);
     }
 
-    private static String convertFromLegacyResolutionString(String resString) {
+    static String convertFromLegacyResolutionString(String resString) {
         if (resString.equalsIgnoreCase("360p")) {
             return RES_360P;
         }
@@ -469,15 +469,15 @@ public class PreferenceConfiguration {
         }
     }
 
-    private static int getWidthFromResolutionString(String resString) {
+    static int getWidthFromResolutionString(String resString) {
         return Integer.parseInt(resString.split("x")[0]);
     }
 
-    private static int getHeightFromResolutionString(String resString) {
+    static int getHeightFromResolutionString(String resString) {
         return Integer.parseInt(resString.split("x")[1]);
     }
 
-    private static String getResolutionString(int width, int height) {
+    static String getResolutionString(int width, int height) {
         switch (height) {
             case 360:
                 return RES_360P;
@@ -722,115 +722,25 @@ private static int getFramePacingValue(Context context) {
         }
         PreferenceConfiguration config = new PreferenceConfiguration();
 
-        // Migrate legacy preferences to the new locations
-        if (prefs.contains(LEGACY_ENABLE_51_SURROUND_PREF_STRING)) {
-            if (prefs.getBoolean(LEGACY_ENABLE_51_SURROUND_PREF_STRING, false)) {
-                prefs.edit()
-                        .remove(LEGACY_ENABLE_51_SURROUND_PREF_STRING)
-                        .putString(AUDIO_CONFIG_PREF_STRING, "51")
-                        .apply();
-            }
-        }
-
-        String str = prefs.getString(LEGACY_RES_FPS_PREF_STRING, null);
-        if (str != null) {
-            if (str.equals("360p30")) {
-                config.width = 640;
-                config.height = 360;
-                config.fps = 30;
-            }
-            else if (str.equals("360p60")) {
-                config.width = 640;
-                config.height = 360;
-                config.fps = 60;
-            }
-            else if (str.equals("720p30")) {
-                config.width = 1280;
-                config.height = 720;
-                config.fps = 30;
-            }
-            else if (str.equals("720p60")) {
-                config.width = 1280;
-                config.height = 720;
-                config.fps = 60;
-            }
-            else if (str.equals("1080p30")) {
-                config.width = 1920;
-                config.height = 1080;
-                config.fps = 30;
-            }
-            else if (str.equals("1080p60")) {
-                config.width = 1920;
-                config.height = 1080;
-                config.fps = 60;
-            }
-            else if (str.equals("4K30")) {
-                config.width = 3840;
-                config.height = 2160;
-                config.fps = 30;
-            }
-            else if (str.equals("4K60")) {
-                config.width = 3840;
-                config.height = 2160;
-                config.fps = 60;
-            }
-            else {
-                // Should never get here
-                config.width = 1280;
-                config.height = 720;
-                config.fps = 60;
-            }
-
-            prefs.edit()
-                    .remove(LEGACY_RES_FPS_PREF_STRING)
-                    .putString(RESOLUTION_PREF_STRING, getResolutionString(config.width, config.height))
-                    .putString(FPS_PREF_STRING, ""+config.fps)
-                    .apply();
+        // Move settings saved by older versions to their current keys
+        PreferenceMigrator.StreamMode legacyMode = PreferenceMigrator.migrate(context, prefs);
+        if (legacyMode != null) {
+            config.width = legacyMode.width;
+            config.height = legacyMode.height;
+            config.fps = legacyMode.fps;
         }
         else {
-            // Use the new preference location
             String resStr = prefs.getString(RESOLUTION_PREF_STRING, PreferenceConfiguration.DEFAULT_RESOLUTION);
 
-            // Convert legacy resolution strings to the new style
+            // A profile can still hold an old-style resolution string, which the
+            // migration above can't rewrite
             if (!resStr.contains("x")) {
                 resStr = PreferenceConfiguration.convertFromLegacyResolutionString(resStr);
-                prefs.edit().putString(RESOLUTION_PREF_STRING, resStr).apply();
             }
 
             config.width = PreferenceConfiguration.getWidthFromResolutionString(resStr);
             config.height = PreferenceConfiguration.getHeightFromResolutionString(resStr);
             config.fps = Float.parseFloat(prefs.getString(FPS_PREF_STRING, PreferenceConfiguration.DEFAULT_FPS));
-        }
-
-        if (prefs.contains(LEGACY_STRETCH_PREF_STRING)) {
-            boolean stretch = prefs.getBoolean(LEGACY_STRETCH_PREF_STRING, false);
-            prefs.edit()
-                    .remove(LEGACY_STRETCH_PREF_STRING)
-                    .putString(VIDEO_SCALE_MODE_PREF_STRING, stretch ? "stretch" : "fit")
-                    .apply();
-        }
-
-        if (prefs.contains(LEGACY_ENFORCE_REFRESH_RATE_STRING)) {
-            boolean enforce = prefs.getBoolean(LEGACY_ENFORCE_REFRESH_RATE_STRING, false);
-            prefs.edit()
-                    .remove(LEGACY_ENFORCE_REFRESH_RATE_STRING)
-                    .putBoolean(ENFORCE_DISPLAY_MODE_PREF_STRING, enforce)
-                    .apply();
-        }
-
-        if (!prefs.contains(SMALL_ICONS_PREF_STRING)) {
-            // We need to write small icon mode's default to disk for the settings page to display
-            // the current state of the option properly
-            prefs.edit().putBoolean(SMALL_ICONS_PREF_STRING, getDefaultSmallMode(context)).apply();
-        }
-
-        if (!prefs.contains(GAMEPAD_MOTION_SENSORS_PREF_STRING) && Build.VERSION.SDK_INT == Build.VERSION_CODES.S) {
-            // Android 12 has a nasty bug that causes crashes when the app touches the InputDevice's
-            // associated InputDeviceSensorManager (just calling getSensorManager() is enough).
-            // As a workaround, we will override the default value for the gamepad motion sensor
-            // option to disabled on Android 12 to reduce the impact of this bug.
-            // https://cs.android.com/android/_/android/platform/frameworks/base/+/8970010a5e9f3dc5c069f56b4147552accfcbbeb
-            prefs.edit().putBoolean(GAMEPAD_MOTION_SENSORS_PREF_STRING, false).apply();
         }
 
         // This must happen after the preferences migration to ensure the preferences are populated
