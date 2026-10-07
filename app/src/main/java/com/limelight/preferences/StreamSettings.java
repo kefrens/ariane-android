@@ -54,6 +54,7 @@ import com.limelight.R;
 import com.limelight.profiles.ProfilesManager;
 import com.limelight.binding.input.virtual_controller.keyboard.KeyBoardControllerConfigurationLoader;
 import com.limelight.binding.video.MediaCodecHelper;
+import com.limelight.ui.AmbientBackgroundDrawable;
 import com.limelight.utils.Dialog;
 import com.limelight.utils.FileUriUtils;
 import com.limelight.utils.PerformanceDataTracker;
@@ -101,7 +102,7 @@ public class StreamSettings extends AppCompatActivity {
         UiHelper.setLocale(this);
 
         setContentView(R.layout.activity_stream_settings);
-        getWindow().setBackgroundDrawableResource(R.drawable.tv_screen_bg);
+        getWindow().setBackgroundDrawable(new AmbientBackgroundDrawable(this));
         sidebar = SettingsSidebar.attach(this);
 
         TextView profileLine = findViewById(R.id.settingsProfile);

@@ -22,6 +22,7 @@ import com.limelight.preferences.GlPreferences;
 import com.limelight.preferences.PreferenceConfiguration;
 import com.limelight.preferences.StreamSettings;
 import com.limelight.profiles.ProfilesManager;
+import com.limelight.ui.AmbientBackgroundDrawable;
 import com.limelight.ui.AdapterFragment;
 import com.limelight.ui.AdapterFragmentCallbacks;
 import com.limelight.ui.TvOptionsKey;
@@ -142,7 +143,7 @@ public class PcView extends AppCompatActivity implements AdapterFragmentCallback
 
     private void initializeViews() {
         setContentView(R.layout.activity_pc_view);
-        getWindow().setBackgroundDrawableResource(R.drawable.tv_screen_bg);
+        getWindow().setBackgroundDrawable(new AmbientBackgroundDrawable(this));
 
         UiHelper.notifyNewRootView(this);
 

@@ -11,6 +11,7 @@ import androidx.preference.ListPreference;
 import androidx.preference.PreferenceViewHolder;
 
 import com.limelight.R;
+import com.limelight.ui.OptionPanel;
 
 /**
  * A list setting that shows its current value at the end of the row. With a remote,
@@ -65,6 +66,19 @@ public class InlineListPreference extends ListPreference {
         });
     }
 
+    @Override
+    protected void onClick() {
+        // OK opens the choices in a side panel instead of the old centred dialog
+        OptionPanel.show(getContext(), getTitle(), getEntries(), findIndexOfValue(getValue()),
+                index -> setValueFromUser(getEntryValues()[index].toString()));
+    }
+
+    private void setValueFromUser(String newValue) {
+        if (callChangeListener(newValue)) {
+            setValue(newValue);
+        }
+    }
+
     // Moves to the previous or next value. At either end the key is left alone, so
     // Left on the first value still moves focus back to the categories.
     private boolean step(int direction) {
@@ -78,10 +92,7 @@ public class InlineListPreference extends ListPreference {
             return false;
         }
 
-        String newValue = values[next].toString();
-        if (callChangeListener(newValue)) {
-            setValue(newValue);
-        }
+        setValueFromUser(values[next].toString());
         return true;
     }
 }

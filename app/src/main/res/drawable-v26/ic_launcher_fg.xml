@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Ariane launcher icon, foreground layer: a rocket lifting off a planet's horizon.
+     Everything that matters stays inside the 66dp safe zone of adaptive icons. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#FF0A1A4F"
+        android:pathData="M0,78 C36,64 78,70 108,100 L108,108 L0,108 Z" />
+    <path
+        android:pathData="M0,78 C36,64 78,70 108,100"
+        android:strokeColor="#593B82F6"
+        android:strokeWidth="5" />
+    <path
+        android:pathData="M0,78 C36,64 78,70 108,100"
+        android:strokeColor="#FFDBEAFE"
+        android:strokeWidth="1.1" />
+    <path
+        android:pathData="M28,71.5 C38,68 48,63 53.2,55.6"
+        android:strokeLineCap="round"
+        android:strokeWidth="3">
+        <aapt:attr name="android:strokeColor">
+            <gradient
+                android:type="linear"
+                android:startX="28"
+                android:startY="71.5"
+                android:endX="53.2"
+                android:endY="55.6"
+                android:startColor="#0093C5FD"
+                android:endColor="#F2FFFFFF" />
+        </aapt:attr>
+    </path>
+    <group
+        android:translateX="58"
+        android:translateY="48"
+        android:rotation="32"
+        android:scaleX="0.9"
+        android:scaleY="0.9">
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M0,-24 C6,-16 7,-4 4.5,10 L-4.5,10 C-7,-4 -6,-16 0,-24 Z" />
+        <path
+            android:fillColor="#FFE0E7FF"
+            android:pathData="M-5,0 C-9,3 -12,8 -12,14 C-9,11 -7,10 -4.5,9.5 Z" />
+        <path
+            android:fillColor="#FFE0E7FF"
+            android:pathData="M5,0 C9,3 12,8 12,14 C9,11 7,10 4.5,9.5 Z" />
+        <path
+            android:pathData="M0,-13 L0,2"
+            android:strokeColor="#FF1E3A8A"
+            android:strokeLineCap="round"
+            android:strokeWidth="1.6" />
+    </group>
+</vector>

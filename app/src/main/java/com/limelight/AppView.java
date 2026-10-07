@@ -15,6 +15,7 @@ import com.limelight.nvstream.http.NvHTTP;
 import com.limelight.nvstream.http.PairingManager;
 import com.limelight.preferences.PreferenceConfiguration;
 import com.limelight.profiles.ProfilesManager;
+import com.limelight.ui.AmbientBackgroundDrawable;
 import com.limelight.ui.AdapterFragment;
 import com.limelight.ui.AdapterFragmentCallbacks;
 import com.limelight.ui.FocusHighlighter;
@@ -315,7 +316,7 @@ public class AppView extends AppCompatActivity implements AdapterFragmentCallbac
         UiHelper.setLocale(this);
 
         setContentView(R.layout.activity_app_view);
-        getWindow().setBackgroundDrawableResource(R.drawable.tv_screen_bg);
+        getWindow().setBackgroundDrawable(new AmbientBackgroundDrawable(this));
 
         // Allow floating expanded PiP overlays while browsing apps
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -748,7 +749,7 @@ public class AppView extends AppCompatActivity implements AdapterFragmentCallbac
                 getResources().getDrawable(R.drawable.tv_backdrop_scrim)
         });
         Drawable previous = currentBackdrop != null ?
-                currentBackdrop : getResources().getDrawable(R.drawable.tv_screen_bg);
+                currentBackdrop : new AmbientBackgroundDrawable(this);
 
         TransitionDrawable fade = new TransitionDrawable(new Drawable[] { previous, next });
         fade.setCrossFadeEnabled(true);
