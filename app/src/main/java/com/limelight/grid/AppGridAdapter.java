@@ -29,7 +29,7 @@ import java.util.Set;
 public class AppGridAdapter extends GenericGridAdapter<AppView.AppObject> {
     private static final int ART_WIDTH_PX = 300;
     private static final int SMALL_WIDTH_DP = 110;
-    private static final int LARGE_WIDTH_DP = 152;
+    private static final int LARGE_WIDTH_DP = 120;
 
     private final ComputerDetails computer;
     private final String uniqueId;

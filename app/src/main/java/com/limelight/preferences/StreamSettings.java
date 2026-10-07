@@ -70,6 +70,7 @@ public class StreamSettings extends AppCompatActivity {
     private int previousDisplayPixelCount;
 
     private SettingsFragment prefsFragment;
+    private SettingsSidebar sidebar;
 
     // HACK for Android 9
     static DisplayCutout displayCutoutP;
@@ -98,6 +99,8 @@ public class StreamSettings extends AppCompatActivity {
         UiHelper.setLocale(this);
 
         setContentView(R.layout.activity_stream_settings);
+        getWindow().setBackgroundDrawableResource(R.drawable.tv_screen_bg);
+        sidebar = SettingsSidebar.attach(this);
 
 //        UiHelper.notifyNewRootView(this);
     }
@@ -158,6 +161,12 @@ public class StreamSettings extends AppCompatActivity {
                     System.exit(0);
                 }
             }
+        }
+    }
+
+    void onPreferencesShown(SettingsFragment fragment) {
+        if (sidebar != null) {
+            sidebar.bind(fragment);
         }
     }
 
@@ -320,6 +329,9 @@ public class StreamSettings extends AppCompatActivity {
         public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
             View view = super.onCreateView(inflater, container, savedInstanceState);
             UiHelper.applyStatusBarPadding(view);
+            if (getActivity() instanceof StreamSettings) {
+                ((StreamSettings) getActivity()).onPreferencesShown(this);
+            }
             return view;
         }
 

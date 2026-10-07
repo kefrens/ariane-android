@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Darkens the game-art backdrop so titles and posters stay readable on top of it -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape android:shape="rectangle">
+            <gradient
+                android:angle="270"
+                android:startColor="#660F1419"
+                android:centerColor="#990F1419"
+                android:endColor="#F20F1419" />
+        </shape>
+    </item>
+    <item>
+        <shape android:shape="rectangle">
+            <gradient
+                android:angle="0"
+                android:startColor="#B30F1419"
+                android:endColor="#000F1419" />
+        </shape>
+    </item>
+</layer-list>

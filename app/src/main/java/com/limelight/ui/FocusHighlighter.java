@@ -18,6 +18,15 @@ public final class FocusHighlighter {
 
     private FocusHighlighter() {}
 
+    /** Told about each item the D-pad lands on, after the zoom starts. */
+    public interface SelectionListener {
+        void onItemSelected(View view, int position);
+    }
+
+    public static void setSelectionListener(AbsListView list, SelectionListener listener) {
+        list.setTag(R.id.focus_selection_listener, listener);
+    }
+
     public static void install(final AbsListView list) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             // Each item draws the ring as its foreground, so it zooms with the item.
@@ -40,6 +49,11 @@ public final class FocusHighlighter {
                     current = view;
                 }
                 zoom(view, list.hasFocus());
+
+                Object listener = list.getTag(R.id.focus_selection_listener);
+                if (listener instanceof SelectionListener && view != null) {
+                    ((SelectionListener) listener).onItemSelected(view, position);
+                }
             }
 
             @Override

@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Tag on a host or app grid holding its FocusHighlighter.SelectionListener -->
+    <item name="focus_selection_listener" type="id" />
+</resources>

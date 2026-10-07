@@ -17,6 +17,7 @@ import com.limelight.preferences.PreferenceConfiguration;
 import com.limelight.profiles.ProfilesManager;
 import com.limelight.ui.AdapterFragment;
 import com.limelight.ui.AdapterFragmentCallbacks;
+import com.limelight.ui.FocusHighlighter;
 import com.limelight.ui.TvOptionsKey;
 import com.limelight.utils.CacheHelper;
 import com.limelight.utils.Dialog;
@@ -34,6 +35,9 @@ import android.content.SharedPreferences;
 import android.content.res.Configuration;
 import android.graphics.Bitmap;
 import android.graphics.drawable.BitmapDrawable;
+import android.graphics.drawable.Drawable;
+import android.graphics.drawable.LayerDrawable;
+import android.graphics.drawable.TransitionDrawable;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -60,6 +64,9 @@ import org.xmlpull.v1.XmlPullParserException;
 public class AppView extends AppCompatActivity implements AdapterFragmentCallbacks {
     private AppGridAdapter appGridAdapter;
     private AbsListView appListView;
+    private Drawable currentBackdrop;
+
+    private static final int BACKDROP_FADE_MS = 400;
     private String uuidString;
     private ShortcutHelper shortcutHelper;
 
@@ -308,6 +315,7 @@ public class AppView extends AppCompatActivity implements AdapterFragmentCallbac
         UiHelper.setLocale(this);
 
         setContentView(R.layout.activity_app_view);
+        getWindow().setBackgroundDrawableResource(R.drawable.tv_screen_bg);
 
         // Allow floating expanded PiP overlays while browsing apps
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -722,6 +730,51 @@ public class AppView extends AppCompatActivity implements AdapterFragmentCallbac
         });
     }
 
+    // PS5-style backdrop: the focused game's art, blurred and darkened, fills the screen
+    private void updateBackdrop(View itemView) {
+        ImageView artView = itemView.findViewById(R.id.grid_image);
+        if (artView == null || artView.getVisibility() != View.VISIBLE ||
+                !(artView.getDrawable() instanceof BitmapDrawable)) {
+            return;
+        }
+
+        Bitmap blurred = blurForBackdrop(((BitmapDrawable) artView.getDrawable()).getBitmap());
+        if (blurred == null) {
+            return;
+        }
+
+        Drawable next = new LayerDrawable(new Drawable[] {
+                new BitmapDrawable(getResources(), blurred),
+                getResources().getDrawable(R.drawable.tv_backdrop_scrim)
+        });
+        Drawable previous = currentBackdrop != null ?
+                currentBackdrop : getResources().getDrawable(R.drawable.tv_screen_bg);
+
+        TransitionDrawable fade = new TransitionDrawable(new Drawable[] { previous, next });
+        fade.setCrossFadeEnabled(true);
+        getWindow().setBackgroundDrawable(fade);
+        fade.startTransition(BACKDROP_FADE_MS);
+        currentBackdrop = next;
+    }
+
+    // Takes a screen-shaped band from the middle of the art and shrinks it to 16x9
+    // pixels. Stretched back to full screen with filtering, that reads as a heavy blur.
+    private static Bitmap blurForBackdrop(Bitmap art) {
+        if (art == null || art.getWidth() < 16 || art.getHeight() < 9) {
+            return null;
+        }
+
+        try {
+            int bandHeight = Math.min(art.getHeight(), art.getWidth() * 9 / 16);
+            Bitmap band = Bitmap.createBitmap(art, 0, (art.getHeight() - bandHeight) / 2,
+                    art.getWidth(), bandHeight);
+            return Bitmap.createScaledBitmap(band, 16, 9, true);
+        } catch (RuntimeException e) {
+            // For example a hardware bitmap that can't be read back
+            return null;
+        }
+    }
+
     private void confirmQuit(final AppObject app) {
         // Display a confirmation dialog first
         UiHelper.displayQuitConfirmationDialog(this, new Runnable() {
@@ -801,6 +854,7 @@ public class AppView extends AppCompatActivity implements AdapterFragmentCallbac
     @Override
     public void receiveAbsListView(AbsListView listView) {
         appListView = listView;
+        FocusHighlighter.setSelectionListener(listView, (view, position) -> updateBackdrop(view));
         listView.setAdapter(appGridAdapter);
         listView.setOnItemClickListener(new OnItemClickListener() {
             @Override
