@@ -170,7 +170,7 @@
     <string name="addpc_wrong_sitelocal">Cette adresse ne semble pas correcte. Vous devez utiliser l\'adresse IP publique de votre routeur pour le streaming depuis Internet.</string>
 
     <!-- Preferences -->
-    <string name="category_general_settings">Général</string>
+    <string name="category_general_settings">Presse-papiers</string>
     <string name="category_video_settings">Vidéo</string>
     <string name="title_resolution_list">Résolution vidéo</string>
     <string name="summary_resolution_list">Augmentez pour une meilleure clarté de l\'image. Réduisez pour de meilleures performances sur les appareils bas de gamme et les réseaux lents.</string>
@@ -206,7 +206,7 @@
     <string name="title_checkbox_enable_audiofx">Activer le support de l\'égalisateur système</string>
     <string name="summary_checkbox_enable_audiofx">Permet aux effets audio de fonctionner lors du streaming, mais peut augmenter la latence</string>
 
-    <string name="category_gamepad_settings">Manettes</string>
+    <string name="category_gamepad_settings">Manettes et télécommande</string>
     <string name="title_checkbox_multi_controller">Détection automatique de la présence de la manette</string>
     <string name="summary_checkbox_multi_controller">Décocher cette option force une manette à toujours être présente</string>
     <string name="title_checkbox_vibrate_fallback">Émuler les vibrations de la manette avec l\'appareil</string>
@@ -242,7 +242,7 @@
     <string name="title_checkbox_mouse_nav_buttons">Activer les boutons de navigation arrière et avant de la souris</string>
     <string name="summary_checkbox_mouse_nav_buttons">L\'activation de cette option peut casser le clic droit sur certains appareils bogués</string>
 
-    <string name="category_on_screen_controls_settings">Commandes à l\'écran</string>
+    <string name="category_on_screen_controls_settings">Commandes tactiles</string>
     <string name="title_checkbox_show_onscreen_controls">Afficher les commandes à l\'écran</string>
     <string name="summary_checkbox_show_onscreen_controls">Affiche une manette virtuelle sur l\'écran tactile</string>
     <string name="title_hide_osc_when_has_gamepad">Masquer les commandes à l\'écran lors de l\'utilisation d\'une manette</string>
@@ -263,7 +263,7 @@
     <string name="dialog_title_osc_opacity">Modifier l\'opacité</string>
     <string name="suffix_osc_opacity">%</string>
 
-    <string name="category_ui_settings">Interface</string>
+    <string name="category_ui_settings">Apparence</string>
     <string name="title_checkbox_enable_pip">Activer le mode observateur Picture-in-Picture</string>
     <string name="summary_checkbox_enable_pip">Permet de visualiser le flux (sans le contrôler) tout en utilisant une autre application</string>
     <string name="title_language_list">Langue</string>
@@ -496,7 +496,7 @@
     <string name="summary_smart_clipboard_sync_toast">Afficher un toast pour le résultat de la synchronisation du presse-papiers</string>
     <string name="title_hide_clipboard_content">Masquer le contenu du presse-papiers</string>
     <string name="summary_hide_clipboard_content">Marquer le contenu du presse-papiers distant comme informations sensibles</string>
-    <string name="title_settings_misc">Divers</string>
+    <string name="title_settings_misc">À propos et aide</string>
     <string name="perf_overlay_lite_bandwidth">Bande passante</string>
     <string name="perf_overlay_lite_network_decoding_delay">Délai de décodage/réseau</string>
     <string name="perf_overlay_lite_packet_loss">Perte de paquets</string>

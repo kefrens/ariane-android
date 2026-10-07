@@ -195,7 +195,7 @@
     <string name="addpc_wrong_sitelocal">That address doesn\'t look right. You must use your router\'s public IP address for streaming over the Internet.</string>
 
     <!-- Preferences -->
-    <string name="category_general_settings">General</string>
+    <string name="category_general_settings">Clipboard</string>
     <string name="category_video_settings">Video</string>
     <string name="title_resolution_list">Video resolution</string>
     <string name="summary_resolution_list">Increase to improve image clarity. Decrease for better performance on lower end devices and slower networks.</string>
@@ -231,7 +231,7 @@
     <string name="title_checkbox_enable_audiofx">Enable system equalizer support</string>
     <string name="summary_checkbox_enable_audiofx">Allows audio effects to function while streaming, but may increase audio latency</string>
 
-    <string name="category_gamepad_settings">Gamepads</string>
+    <string name="category_gamepad_settings">Gamepads &amp; remote</string>
     <string name="title_checkbox_multi_controller">Automatic gamepad presence detection</string>
     <string name="summary_checkbox_multi_controller">Unchecking this option forces a gamepad to always be present</string>
     <string name="title_checkbox_vibrate_fallback">Emulate rumble support with vibration</string>
@@ -270,7 +270,7 @@
     <string name="title_checkbox_mouse_nav_buttons">Enable forward/back mouse buttons</string>
     <string name="summary_checkbox_mouse_nav_buttons">Enabling this option may break right clicking on some buggy devices</string>
 
-    <string name="category_on_screen_controls_settings">On-screen controls</string>
+    <string name="category_on_screen_controls_settings">Touch controls</string>
     <string name="title_checkbox_show_onscreen_controls">Show on-screen controls</string>
     <string name="summary_checkbox_show_onscreen_controls">Show virtual controller overlay on touchscreen</string>
     <string name="title_hide_osc_when_has_gamepad">Hide OSC when using Controller</string>
@@ -291,7 +291,7 @@
     <string name="dialog_title_osc_opacity">Change opacity</string>
     <string name="suffix_osc_opacity">%</string>
 
-    <string name="category_ui_settings">Interface</string>
+    <string name="category_ui_settings">Appearance</string>
     <string name="title_checkbox_enable_pip">Enable Picture-in-Picture observer mode</string>
     <string name="summary_checkbox_enable_pip">Allows the stream to be viewed (but not controlled) while multitasking</string>
     <string name="title_language_list">Language</string>
@@ -563,7 +563,7 @@
     <string name="summary_smart_clipboard_sync_toast">Show toast for clipboard sync result</string>
     <string name="title_hide_clipboard_content">Hide clipboard content</string>
     <string name="summary_hide_clipboard_content">Mark remote clipboard as sensitive information</string>
-    <string name="title_settings_misc">More</string>
+    <string name="title_settings_misc">About &amp; help</string>
     <string name="perf_overlay_lite_bandwidth">Bandwidth</string>
     <string name="perf_overlay_lite_network_decoding_delay">Network/Decoding delay</string>
     <string name="perf_overlay_lite_packet_loss">Packet loss</string>

@@ -352,6 +352,7 @@ public class StreamSettings extends AppCompatActivity {
         @Override
         public void onCreatePreferences(Bundle bundle, String s) {
             initializePreferences();
+            SettingsGroups.regroup(getPreferenceScreen(), requireActivity().getPackageManager());
         }
 
         public void initializePreferences() {

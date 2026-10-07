@@ -124,8 +124,8 @@ final class SettingsSidebar {
             }
 
             PreferenceCategory category = (PreferenceCategory) pref;
-            // The options pane has room for everything, so skip the "show more" row
-            category.setInitialExpandedChildrenCount(Integer.MAX_VALUE);
+            // The options pane has room for everything, so skip the "show more" rows
+            expandAll(category);
 
             TextView item = (TextView) inflater.inflate(R.layout.settings_category_item, container, false);
             item.setText(category.getTitle());
@@ -140,6 +140,16 @@ final class SettingsSidebar {
             View first = container.getChildAt(0);
             select(first);
             first.requestFocus();
+        }
+    }
+
+    private static void expandAll(PreferenceGroup group) {
+        group.setInitialExpandedChildrenCount(Integer.MAX_VALUE);
+        for (int i = 0; i < group.getPreferenceCount(); i++) {
+            Preference child = group.getPreference(i);
+            if (child instanceof PreferenceGroup) {
+                expandAll((PreferenceGroup) child);
+            }
         }
     }
 
