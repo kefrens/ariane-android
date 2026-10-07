@@ -2,27 +2,49 @@
 <resources>
 
     <!--
-        Base application theme, dependent on API level. This theme is replaced
-        by AppBaseTheme from res/values-vXX/styles.xml on newer devices.
-
+        Base application theme: Material 3 dark on every API level, with Ariane's
+        colour roles. values-v29 adds the API 29+ window tweaks on top of it.
     -->
-    <style name="AppBaseTheme" parent="Theme.MaterialComponents.NoActionBar">
-        <!--
-            Theme customizations available in newer API levels can go in
-            res/values-vXX/styles.xml, while customizations related to
-            backward-compatibility can go here.
-        -->
+    <style name="Base.AppTheme" parent="Theme.Material3.Dark.NoActionBar">
+        <item name="colorPrimary">@color/ariane_primary</item>
+        <item name="colorOnPrimary">@color/ariane_on_primary</item>
+        <item name="colorPrimaryContainer">@color/ariane_primary_container</item>
+        <item name="colorOnPrimaryContainer">@color/ariane_on_primary_container</item>
+        <item name="colorSecondary">@color/ariane_secondary</item>
+        <item name="colorOnSecondary">@color/ariane_on_secondary</item>
+        <item name="colorSecondaryContainer">@color/ariane_secondary_container</item>
+        <item name="colorOnSecondaryContainer">@color/ariane_on_secondary_container</item>
+        <item name="colorTertiary">@color/ariane_tertiary</item>
+        <item name="colorOnTertiary">@color/ariane_on_tertiary</item>
+        <item name="colorTertiaryContainer">@color/ariane_tertiary_container</item>
+        <item name="colorOnTertiaryContainer">@color/ariane_on_tertiary_container</item>
+        <item name="colorError">@color/ariane_error</item>
+        <item name="colorOnError">@color/ariane_on_error</item>
+        <item name="colorErrorContainer">@color/ariane_error_container</item>
+        <item name="colorOnErrorContainer">@color/ariane_on_error_container</item>
+        <item name="android:colorBackground">@color/ariane_background</item>
+        <item name="colorOnBackground">@color/ariane_on_background</item>
+        <item name="colorSurface">@color/ariane_surface</item>
+        <item name="colorOnSurface">@color/ariane_on_surface</item>
+        <item name="colorSurfaceVariant">@color/ariane_surface_variant</item>
+        <item name="colorOnSurfaceVariant">@color/ariane_on_surface_variant</item>
+        <item name="colorSurfaceContainerLow">@color/ariane_surface_container_low</item>
+        <item name="colorSurfaceContainer">@color/ariane_surface_container</item>
+        <item name="colorSurfaceContainerHigh">@color/ariane_surface_container_high</item>
+        <item name="colorOutline">@color/ariane_outline</item>
+        <item name="colorOutlineVariant">@color/ariane_outline_variant</item>
     </style>
+
+    <style name="AppBaseTheme" parent="Base.AppTheme" />
 
     <!-- Application theme. -->
     <style name="AppTheme" parent="AppBaseTheme">
         <!-- All customizations that are NOT specific to a particular API-level can go here. -->
         <item name="android:windowActionBar">false</item>
         <item name="android:windowNoTitle">true</item>
-        <item name="android:statusBarColor">#1A1A1A</item>
-        <item name="android:navigationBarColor">#1A1A1A</item>
-        <item name="android:colorBackground">#1A1A1A</item>
-        <item name="android:windowBackground">#1A1A1A</item>
+        <item name="android:statusBarColor">@color/ariane_background</item>
+        <item name="android:navigationBarColor">@color/ariane_background</item>
+        <item name="android:windowBackground">@color/ariane_background</item>
     </style>
 
     <style name="StreamBaseTheme" parent="AppBaseTheme">
@@ -49,12 +71,8 @@
         <item name="colorButtonNormal">@android:color/white</item>
     </style>
 
-    <style name="SettingsTheme" parent="Theme.AppCompat.NoActionBar">
-        <item name="android:statusBarColor">@android:color/transparent</item>
-        <item name="android:navigationBarColor">@android:color/transparent</item>
-        <item name="android:colorBackground">@android:color/transparent</item>
-        <item name="android:windowBackground">@android:color/transparent</item>
-    </style>
+    <!-- Settings screens share the app theme on every API level -->
+    <style name="SettingsTheme" parent="AppTheme" />
 
     <style name="ExternalDisplayControllerTheme" parent="AppTheme">
         <item name="android:statusBarColor">@android:color/black</item>
