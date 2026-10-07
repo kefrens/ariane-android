@@ -96,9 +96,9 @@ android {
     buildTypes {
         debug {
             applicationIdSuffix ".noirdebug"
-            resValue "string", "app_label", "Ariane"
-            resValue "string", "app_label_root", "Ariane (Root)"
-            resValue "string", "app_label_game", "Ariane (Game)"
+            resValue "string", "app_label", "Vega"
+            resValue "string", "app_label_root", "Vega (Root)"
+            resValue "string", "app_label_game", "Vega (Game)"
 
             minifyEnabled true
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
@@ -135,9 +135,9 @@ android {
             //
             // TL;DR: Leave the following line alone!
             applicationIdSuffix ".noir"
-            resValue "string", "app_label", "Artemis"
-            resValue "string", "app_label_root", "Artemis (Root)"
-            resValue "string", "app_label_game", "Artemis (Game)"
+            resValue "string", "app_label", "Ariane"
+            resValue "string", "app_label_root", "Ariane (Root)"
+            resValue "string", "app_label_game", "Ariane (Game)"
 
             minifyEnabled true
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
