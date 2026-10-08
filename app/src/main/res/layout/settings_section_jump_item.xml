@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Shortcut to one section of the category on show; OK scrolls the options to it -->
+<ImageView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="52dp"
+    android:layout_height="52dp"
+    android:layout_marginBottom="8dp"
+    android:background="@drawable/settings_category_bg"
+    android:clickable="true"
+    android:focusable="true"
+    android:padding="14dp"
+    android:scaleType="fitCenter" />

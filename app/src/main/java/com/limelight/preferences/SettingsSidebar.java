@@ -7,6 +7,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.inputmethod.EditorInfo;
 import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
@@ -15,6 +16,8 @@ import androidx.preference.PreferenceCategory;
 import androidx.preference.PreferenceFragmentCompat;
 import androidx.preference.PreferenceGroup;
 import androidx.preference.PreferenceScreen;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 import com.limelight.R;
 
@@ -29,11 +32,16 @@ import java.util.Map;
  * Left pane of the two-pane settings used on TVs and other wide screens. It lists
  * the preference categories, and the options pane shows only the selected one.
  * The search field above the categories shows matching options from every category.
+ * A column of section icons next to the options jumps to a section of the category.
  */
 final class SettingsSidebar {
     private final LinearLayout container;
     private final EditText searchField;
     private final TextView searchEmpty;
+    // Section shortcuts, null on layouts without them
+    private final LinearLayout jumpContainer;
+    private final List<PreferenceCategory> jumpSections = new ArrayList<>();
+    private RecyclerView boundList;
     private final List<PreferenceCategory> categories = new ArrayList<>();
     // Visibility of each option before a search, so clearing it restores the options
     // the settings screen hides on purpose (unsupported on this device, for example)
@@ -41,10 +49,12 @@ final class SettingsSidebar {
     private PreferenceFragmentCompat fragment;
     private View activeItem;
 
-    private SettingsSidebar(LinearLayout container, EditText searchField, TextView searchEmpty) {
+    private SettingsSidebar(LinearLayout container, EditText searchField, TextView searchEmpty,
+                            LinearLayout jumpContainer) {
         this.container = container;
         this.searchField = searchField;
         this.searchEmpty = searchEmpty;
+        this.jumpContainer = jumpContainer;
 
         // Moving up and down the sidebar switches category, like Google TV's settings.
         // Coming back from the options pane lands on the category on show, not on
@@ -93,7 +103,8 @@ final class SettingsSidebar {
         LinearLayout container = activity.findViewById(R.id.settingsCategories);
         return container != null ? new SettingsSidebar(container,
                 activity.findViewById(R.id.settingsSearch),
-                activity.findViewById(R.id.settingsSearchEmpty)) : null;
+                activity.findViewById(R.id.settingsSearchEmpty),
+                activity.findViewById(R.id.settingsSections)) : null;
     }
 
     void bind(PreferenceFragmentCompat fragment) {
@@ -114,6 +125,15 @@ final class SettingsSidebar {
         // Rebind rows in place when a value changes, so focus stays on the row
         if (fragment.getListView() != null) {
             fragment.getListView().setItemAnimator(null);
+            if (boundList != fragment.getListView()) {
+                boundList = fragment.getListView();
+                boundList.addOnScrollListener(new RecyclerView.OnScrollListener() {
+                    @Override
+                    public void onScrolled(RecyclerView recyclerView, int dx, int dy) {
+                        markCurrentSection();
+                    }
+                });
+            }
         }
 
         LayoutInflater inflater = LayoutInflater.from(container.getContext());
@@ -206,9 +226,91 @@ final class SettingsSidebar {
         for (PreferenceCategory category : categories) {
             category.setVisible(category == item.getTag());
         }
+        showSections((PreferenceCategory) item.getTag());
 
         if (fragment != null && fragment.getListView() != null) {
             fragment.getListView().scrollToPosition(0);
+        }
+    }
+
+    // Fills the shortcut column with the sections of the category on show
+    private void showSections(PreferenceCategory category) {
+        if (jumpContainer == null) {
+            return;
+        }
+        jumpContainer.removeAllViews();
+        jumpSections.clear();
+        if (category != null) {
+            jumpSections.addAll(SettingsSections.sectionsOf(category));
+        }
+
+        boolean show = jumpSections.size() >= 2;
+        ((View) jumpContainer.getParent()).setVisibility(show ? View.VISIBLE : View.GONE);
+        if (!show) {
+            jumpSections.clear();
+            return;
+        }
+
+        LayoutInflater inflater = LayoutInflater.from(jumpContainer.getContext());
+        for (PreferenceCategory section : jumpSections) {
+            ImageView item = (ImageView) inflater.inflate(R.layout.settings_section_jump_item, jumpContainer, false);
+            int[] icon = SettingsSections.iconOf(section.getKey());
+            if (icon != null) {
+                item.setImageDrawable(SettingsSections.tinted(item.getContext(), icon[0], icon[1]));
+            }
+            item.setContentDescription(item.getContext().getString(R.string.section_jump_to, section.getTitle()));
+            item.setOnClickListener(v -> scrollTo(section));
+            jumpContainer.addView(item);
+        }
+        jumpContainer.getChildAt(0).setActivated(true);
+    }
+
+    private void scrollTo(PreferenceCategory section) {
+        RecyclerView list = fragment != null ? fragment.getListView() : null;
+        if (list == null || !(list.getAdapter() instanceof PreferenceGroup.PreferencePositionCallback)) {
+            return;
+        }
+        int position = ((PreferenceGroup.PreferencePositionCallback) list.getAdapter())
+                .getPreferenceAdapterPosition(section);
+        if (position == RecyclerView.NO_POSITION) {
+            return;
+        }
+        if (list.getLayoutManager() instanceof LinearLayoutManager) {
+            ((LinearLayoutManager) list.getLayoutManager()).scrollToPositionWithOffset(position, 0);
+        } else {
+            list.scrollToPosition(position);
+        }
+        list.post(this::markCurrentSection);
+    }
+
+    // Highlights the shortcut of the section at the top of the options
+    private void markCurrentSection() {
+        RecyclerView list = fragment != null ? fragment.getListView() : null;
+        if (jumpContainer == null || jumpSections.isEmpty() || list == null ||
+                !(list.getLayoutManager() instanceof LinearLayoutManager) ||
+                !(list.getAdapter() instanceof PreferenceGroup.PreferencePositionCallback)) {
+            return;
+        }
+        LinearLayoutManager layout = (LinearLayoutManager) list.getLayoutManager();
+        PreferenceGroup.PreferencePositionCallback positions =
+                (PreferenceGroup.PreferencePositionCallback) list.getAdapter();
+        int top = layout.findFirstVisibleItemPosition();
+        // At the very end of the list the last section may never reach the top
+        boolean atEnd = !list.canScrollVertically(1);
+
+        int current = 0;
+        for (int i = 0; i < jumpSections.size(); i++) {
+            int position = positions.getPreferenceAdapterPosition(jumpSections.get(i));
+            if (position == RecyclerView.NO_POSITION) {
+                continue;
+            }
+            if (position <= top || (atEnd && position <= layout.findLastVisibleItemPosition()
+                    && i == jumpSections.size() - 1)) {
+                current = i;
+            }
+        }
+        for (int i = 0; i < jumpContainer.getChildCount(); i++) {
+            jumpContainer.getChildAt(i).setActivated(i == current);
         }
     }
 
@@ -236,6 +338,7 @@ final class SettingsSidebar {
             return;
         }
 
+        showSections(null);
         boolean anyMatch = false;
         for (PreferenceCategory category : categories) {
             boolean categoryMatches = filter(category, needle);

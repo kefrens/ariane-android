@@ -40,6 +40,16 @@ final class SettingsGroups {
             if (trackpad != null) {
                 screen.removePreference(trackpad);
             }
+
+            // Phone-only video options: rotating the device, and data caps on mobile networks.
+            // The dependent option goes first so its dependency is never missing.
+            for (String key : new String[]{"checkbox_auto_invert_video_resolution",
+                    "checkbox_auto_orientation", "seekbar_metered_bitrate_kbps"}) {
+                Preference pref = screen.findPreference(key);
+                if (pref != null && pref.getParent() != null) {
+                    pref.getParent().removePreference(pref);
+                }
+            }
         }
 
         // The language picker belongs with the other look-and-feel options
