@@ -1,27 +1,26 @@
-PATH=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin:$PATH
-OUTPUT_DIR=~/openssl
-
-BASE_ARGS="no-shared no-ssl3 no-stdio no-engine no-hw"
-
+#!/bin/bash
+# Builds the static OpenSSL libraries in openssl/ for every Android ABI.
+# Run from an OpenSSL source tree: OUTPUT_DIR=/path/to/openssl ./build-openssl.sh
+# Needs ANDROID_NDK_HOME. Only libcrypto is used (moonlight-common-c's stream
+# encryption in PlatformCrypto.c); libssl is kept so the makefile stays the same.
 set -e
 
-./Configure android-arm $BASE_ARGS -D__ANDROID_API__=16
-make clean
-make build_libs -j`nproc`
-cp lib*.a $OUTPUT_DIR/armeabi-v7a/
+export ANDROID_NDK_ROOT=$ANDROID_NDK_HOME
+PATH=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin:$PATH
+OUTPUT_DIR=${OUTPUT_DIR:-~/openssl}
+API=21
 
-./Configure android-arm64 $BASE_ARGS -D__ANDROID_API__=21
-make clean
-make build_libs -j`nproc`
-cp lib*.a $OUTPUT_DIR/arm64-v8a/
+BASE_ARGS="no-shared no-module no-engine no-ssl3 no-comp no-tests no-apps no-docs"
 
-./Configure android-x86 $BASE_ARGS -D__ANDROID_API__=16
-make clean
-make build_libs -j`nproc`
-cp lib*.a $OUTPUT_DIR/x86/
+for pair in android-arm:armeabi-v7a android-arm64:arm64-v8a android-x86:x86 android-x86_64:x86_64; do
+    target=${pair%%:*}
+    abi=${pair##*:}
+    ./Configure $target $BASE_ARGS -D__ANDROID_API__=$API
+    make clean
+    make build_libs -j`nproc`
+    mkdir -p $OUTPUT_DIR/$abi
+    cp libcrypto.a libssl.a $OUTPUT_DIR/$abi/
+done
 
-./Configure android-x86_64 $BASE_ARGS -D__ANDROID_API__=21
-make clean
-make build_libs -j`nproc`
-cp lib*.a $OUTPUT_DIR/x86_64/
-cp -R include/ $OUTPUT_DIR/include
+rm -rf $OUTPUT_DIR/include
+cp -R include $OUTPUT_DIR/include
