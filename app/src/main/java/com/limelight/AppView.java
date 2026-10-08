@@ -3,7 +3,11 @@ package com.limelight;
 import java.io.IOException;
 import java.io.StringReader;
 import java.util.HashSet;
+import java.text.Normalizer;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
+import java.util.TreeMap;
 
 import com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton;
 import com.limelight.computers.ComputerManagerListener;
@@ -17,6 +21,7 @@ import com.limelight.preferences.PreferenceConfiguration;
 import com.limelight.profiles.ProfilesManager;
 import com.limelight.ui.AmbientBackgroundDrawable;
 import com.limelight.ui.ContextMenuPanel;
+import com.limelight.ui.OptionPanel;
 import com.limelight.ui.AdapterFragment;
 import com.limelight.ui.AdapterFragmentCallbacks;
 import com.limelight.ui.DitherNoise;
@@ -330,6 +335,7 @@ public class AppView extends AppCompatActivity implements AdapterFragmentCallbac
         // Setup the profiles button
         findViewById(R.id.profilesButton)
             .setOnClickListener(v -> startActivity(new Intent(this, ProfilesActivity.class)));
+        findViewById(R.id.appSearchButton).setOnClickListener(v -> showJumpToLetter());
 
         showHiddenApps = getIntent().getBooleanExtra(SHOW_HIDDEN_APPS_EXTRA, false);
         uuidString = getIntent().getStringExtra(UUID_EXTRA);
@@ -893,6 +899,48 @@ public class AppView extends AppCompatActivity implements AdapterFragmentCallbac
             return true;
         });
         listView.requestFocus();
+    }
+
+    // The letter an app is filed under: its first letter without accents, or # for anything else
+    static String indexLetter(String name) {
+        if (name == null || name.trim().isEmpty()) {
+            return "#";
+        }
+        String first = Normalizer.normalize(name.trim().substring(0, 1), Normalizer.Form.NFD)
+                .replaceAll("\\p{M}", "").toUpperCase(Locale.ROOT);
+        return first.length() == 1 && first.charAt(0) >= 'A' && first.charAt(0) <= 'Z' ? first : "#";
+    }
+
+    // Search on a remote: pick a letter, and focus lands on the first app filed under it
+    private void showJumpToLetter() {
+        if (appGridAdapter == null || appListView == null) {
+            return;
+        }
+
+        // Letter -> {first position, count}, in alphabetical order
+        TreeMap<String, int[]> letters = new TreeMap<>();
+        for (int i = 0; i < appGridAdapter.getCount(); i++) {
+            String letter = indexLetter(((AppObject) appGridAdapter.getItem(i)).app.getAppName());
+            int[] entry = letters.get(letter);
+            if (entry == null) {
+                letters.put(letter, new int[]{i, 1});
+            } else {
+                entry[1]++;
+            }
+        }
+
+        final List<Integer> firstPositions = new ArrayList<>();
+        CharSequence[] choices = new CharSequence[letters.size()];
+        int c = 0;
+        for (java.util.Map.Entry<String, int[]> entry : letters.entrySet()) {
+            choices[c++] = entry.getKey() + "   (" + entry.getValue()[1] + ")";
+            firstPositions.add(entry.getValue()[0]);
+        }
+        OptionPanel.show(this, getString(R.string.applist_jump_title), choices, -1, index -> {
+            int position = firstPositions.get(index);
+            appListView.requestFocus();
+            appListView.setSelection(position);
+        });
     }
 
     public static class AppObject {

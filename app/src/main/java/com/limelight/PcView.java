@@ -2,6 +2,7 @@ package com.limelight;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.StringReader;
 import java.net.UnknownHostException;
 
 import com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton;
@@ -30,6 +31,7 @@ import com.limelight.ui.TvOptionsKey;
 import com.limelight.utils.Dialog;
 import com.limelight.utils.HelpLauncher;
 import com.limelight.utils.ServerHelper;
+import com.limelight.utils.CacheHelper;
 import com.limelight.utils.ShortcutHelper;
 import com.limelight.utils.UiHelper;
 
@@ -40,6 +42,7 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.net.Uri;
 import android.opengl.GLSurfaceView;
@@ -63,6 +66,7 @@ import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
+import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.AdapterView.AdapterContextMenuInfo;
 
@@ -77,6 +81,8 @@ import javax.microedition.khronos.opengles.GL10;
 public class PcView extends AppCompatActivity implements AdapterFragmentCallbacks {
     private RelativeLayout noPcFoundLayout;
     private PcGridAdapter pcGridAdapter;
+    private String runningAppNameKey;
+    private String runningAppName;
     private AbsListView pcListView;
     private ShortcutHelper shortcutHelper;
     private ComputerManagerService.ComputerManagerBinder managerBinder;
@@ -161,7 +167,6 @@ public class PcView extends AppCompatActivity implements AdapterFragmentCallback
 
         // Setup the list view
         ImageButton settingsButton = findViewById(R.id.settingsButton);
-        ImageButton addComputerButton = findViewById(R.id.manuallyAddPc);
         ImageButton helpButton = findViewById(R.id.helpButton);
         ExtendedFloatingActionButton profilesButton = findViewById(R.id.profilesButton);
 
@@ -169,13 +174,6 @@ public class PcView extends AppCompatActivity implements AdapterFragmentCallback
             @Override
             public void onClick(View v) {
                 startActivity(new Intent(PcView.this, StreamSettings.class));
-            }
-        });
-        addComputerButton.setOnClickListener(new OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Intent i = new Intent(PcView.this, AddComputerManually.class);
-                startActivity(i);
             }
         });
         helpButton.setOnClickListener(new OnClickListener() {
@@ -202,14 +200,20 @@ public class PcView extends AppCompatActivity implements AdapterFragmentCallback
             .replace(R.id.pcFragmentContainer, new AdapterFragment())
             .commitAllowingStateLoss();
 
+        // The remote hints only help when there is no touchscreen
+        if (!getPackageManager().hasSystemFeature(PackageManager.FEATURE_TOUCHSCREEN)) {
+            findViewById(R.id.homeHint).setVisibility(View.VISIBLE);
+        }
+
         noPcFoundLayout = findViewById(R.id.no_pc_found_layout);
-        if (pcGridAdapter.getCount() == 0) {
+        if (pcGridAdapter.getComputerCount() == 0) {
             noPcFoundLayout.setVisibility(View.VISIBLE);
         }
         else {
             noPcFoundLayout.setVisibility(View.INVISIBLE);
         }
         pcGridAdapter.notifyDataSetChanged();
+        updateRunningBanner();
     }
 
     @Override
@@ -403,6 +407,12 @@ public class PcView extends AppCompatActivity implements AdapterFragmentCallback
 
     @Override
     public void onCreateContextMenu(ContextMenu menu, View v, ContextMenuInfo menuInfo) {
+        // The "Add host" card has no options
+        AdapterContextMenuInfo addCardInfo = (AdapterContextMenuInfo) menuInfo;
+        if (pcGridAdapter.isAddCard(addCardInfo.position)) {
+            return;
+        }
+
         stopComputerUpdates(false);
 
         // Call superclass
@@ -739,6 +749,9 @@ public class PcView extends AppCompatActivity implements AdapterFragmentCallback
     public boolean onContextItemSelected(MenuItem item) {
         AdapterContextMenuInfo info = (AdapterContextMenuInfo) item.getMenuInfo();
         final ComputerObject computer = (ComputerObject) pcGridAdapter.getItem(info.position);
+        if (computer == null) {
+            return false;
+        }
         switch (item.getItemId()) {
             case PAIR_ID:
                 doPair(computer.details, null, null);
@@ -778,28 +791,11 @@ public class PcView extends AppCompatActivity implements AdapterFragmentCallback
                 return true;
 
             case RESUME_ID:
-                if (managerBinder == null) {
-                    Toast.makeText(PcView.this, getResources().getString(R.string.error_manager_not_running), Toast.LENGTH_LONG).show();
-                    return true;
-                }
-
-                ServerHelper.doStart(this, new NvApp("app", null, computer.details.runningGameId, false), computer.details, managerBinder, false);
+                resumeRunningApp(computer.details);
                 return true;
 
             case QUIT_ID:
-                if (managerBinder == null) {
-                    Toast.makeText(PcView.this, getResources().getString(R.string.error_manager_not_running), Toast.LENGTH_LONG).show();
-                    return true;
-                }
-
-                // Display a confirmation dialog first
-                UiHelper.displayQuitConfirmationDialog(this, new Runnable() {
-                    @Override
-                    public void run() {
-                        ServerHelper.doQuit(PcView.this, computer.details,
-                                new NvApp("app", null, 0, false), managerBinder, null);
-                    }
-                }, null);
+                quitRunningApp(computer.details);
                 return true;
 
             case VIEW_DETAILS_ID:
@@ -838,8 +834,8 @@ public class PcView extends AppCompatActivity implements AdapterFragmentCallback
                 .remove(details.uuid)
                 .apply();
 
-        for (int i = 0; i < pcGridAdapter.getCount(); i++) {
-            ComputerObject computer = (ComputerObject) pcGridAdapter.getItem(i);
+        for (int i = 0; i < pcGridAdapter.getComputerCount(); i++) {
+            ComputerObject computer = pcGridAdapter.getComputer(i);
 
             if (details.equals(computer.details)) {
                 // Disable or delete shortcuts referencing this PC
@@ -849,7 +845,9 @@ public class PcView extends AppCompatActivity implements AdapterFragmentCallback
                 pcGridAdapter.removeComputer(computer);
                 pcGridAdapter.notifyDataSetChanged();
 
-                if (pcGridAdapter.getCount() == 0) {
+                updateRunningBanner();
+
+                if (pcGridAdapter.getComputerCount() == 0) {
                     // Show the "Discovery in progress" view
                     noPcFoundLayout.setVisibility(View.VISIBLE);
                 }
@@ -862,8 +860,8 @@ public class PcView extends AppCompatActivity implements AdapterFragmentCallback
     private void updateComputer(ComputerDetails details) {
         ComputerObject existingEntry = null;
 
-        for (int i = 0; i < pcGridAdapter.getCount(); i++) {
-            ComputerObject computer = (ComputerObject) pcGridAdapter.getItem(i);
+        for (int i = 0; i < pcGridAdapter.getComputerCount(); i++) {
+            ComputerObject computer = pcGridAdapter.getComputer(i);
 
             // Check if this is the same computer
             if (details.uuid.equals(computer.details.uuid)) {
@@ -886,6 +884,95 @@ public class PcView extends AppCompatActivity implements AdapterFragmentCallback
 
         // Notify the view that the data has changed
         pcGridAdapter.notifyDataSetChanged();
+        updateRunningBanner();
+    }
+
+    private void resumeRunningApp(ComputerDetails details) {
+        if (managerBinder == null) {
+            Toast.makeText(PcView.this, getResources().getString(R.string.error_manager_not_running), Toast.LENGTH_LONG).show();
+            return;
+        }
+
+        ServerHelper.doStart(this, new NvApp("app", null, details.runningGameId, false), details, managerBinder, false);
+    }
+
+    private void quitRunningApp(ComputerDetails details) {
+        if (managerBinder == null) {
+            Toast.makeText(PcView.this, getResources().getString(R.string.error_manager_not_running), Toast.LENGTH_LONG).show();
+            return;
+        }
+
+        // Display a confirmation dialog first
+        UiHelper.displayQuitConfirmationDialog(this, () -> ServerHelper.doQuit(PcView.this, details,
+                new NvApp("app", null, 0, false), managerBinder, null), null);
+    }
+
+    // Shows the game running on a paired host above the host row. With a remote, Resume takes
+    // focus when the banner appears, so one press of OK goes back into the game.
+    private void updateRunningBanner() {
+        View banner = findViewById(R.id.homeRunningBanner);
+        if (banner == null) {
+            return;
+        }
+
+        ComputerDetails running = null;
+        for (int i = 0; i < pcGridAdapter.getComputerCount(); i++) {
+            ComputerDetails details = pcGridAdapter.getComputer(i).details;
+            if (details.state == ComputerDetails.State.ONLINE &&
+                    details.pairState == PairState.PAIRED && details.runningGameId != 0) {
+                running = details;
+                break;
+            }
+        }
+
+        if (running == null) {
+            boolean hadFocus = banner.hasFocus();
+            banner.setVisibility(View.GONE);
+            if (hadFocus && pcListView != null) {
+                pcListView.requestFocus();
+            }
+            return;
+        }
+
+        final ComputerDetails computer = running;
+        ((TextView) findViewById(R.id.homeRunningHost)).setText(getString(R.string.home_running_on, computer.name));
+        ((TextView) findViewById(R.id.homeRunningApp)).setText(getRunningAppName(computer));
+        View resume = findViewById(R.id.homeRunningResume);
+        resume.setOnClickListener(v -> resumeRunningApp(computer));
+        findViewById(R.id.homeRunningQuit).setOnClickListener(v -> quitRunningApp(computer));
+
+        boolean wasHidden = banner.getVisibility() != View.VISIBLE;
+        banner.setVisibility(View.VISIBLE);
+        if (wasHidden && !banner.isInTouchMode()) {
+            resume.requestFocus();
+        }
+    }
+
+    // The host only reports the running app's ID, so the name comes from the app list the
+    // apps screen cached. Looked up once per host and app, since hosts are polled often.
+    private String getRunningAppName(ComputerDetails computer) {
+        String key = computer.uuid + "/" + computer.runningGameId;
+        if (key.equals(runningAppNameKey)) {
+            return runningAppName;
+        }
+
+        String name = getString(R.string.home_running_unknown_app);
+        try {
+            String raw = CacheHelper.readInputStreamToString(
+                    CacheHelper.openCacheFileForInput(getCacheDir(), "applist", computer.uuid));
+            for (NvApp app : NvHTTP.getAppListByReader(new StringReader(raw))) {
+                if (app.getAppId() == computer.runningGameId) {
+                    name = app.getAppName();
+                    break;
+                }
+            }
+        } catch (IOException | XmlPullParserException ignored) {
+            // No cached list yet: keep the generic name
+        }
+
+        runningAppNameKey = key;
+        runningAppName = name;
+        return name;
     }
 
     @Override
@@ -907,6 +994,11 @@ public class PcView extends AppCompatActivity implements AdapterFragmentCallback
             @Override
             public void onItemClick(AdapterView<?> arg0, View arg1, int pos,
                                     long id) {
+                if (pcGridAdapter.isAddCard(pos)) {
+                    startActivity(new Intent(PcView.this, AddComputerManually.class));
+                    return;
+                }
+
                 ComputerObject computer = (ComputerObject) pcGridAdapter.getItem(pos);
                 if (computer.details.state == ComputerDetails.State.UNKNOWN ||
                     computer.details.state == ComputerDetails.State.OFFLINE) {

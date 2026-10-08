@@ -133,6 +133,13 @@
     <string name="applist_running_now">Running now</string>
     <string name="applist_resume">Resume</string>
     <string name="applist_quit">Quit app</string>
+    <string name="home_running_on">Running on %1$s</string>
+    <string name="home_running_unknown_app">A game</string>
+    <string name="home_add_host">Add host</string>
+    <string name="home_add_host_detail">By IP address</string>
+    <string name="home_hint">OK  Open      ☰  Host options      ◀ ▶  Move between hosts</string>
+    <string name="applist_search">Search</string>
+    <string name="applist_jump_title">Jump to letter</string>
     <string name="applist_all_apps">All apps</string>
     <string name="delete_pc_msg">Are you sure you want to delete this PC?</string>
     <string name="slow_connection_msg">Slow connection to PC\nReduce your bitrate</string>
