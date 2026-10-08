@@ -432,16 +432,27 @@ public class StreamSettings extends AppCompatActivity {
                 // turning it on lifts stereo to 5.1, and picking stereo turns it off
                 ListPreference passthrough = findPreference("list_passthrough_format");
                 ListPreference channels = findPreference(PreferenceConfiguration.AUDIO_CONFIG_PREF_STRING);
+                // The buffer size only applies while passthrough is on
+                Preference buffer = findPreference("list_passthrough_buffer");
                 if (passthrough != null && channels != null) {
+                    if (buffer != null) {
+                        buffer.setVisible(!"off".equals(passthrough.getValue()));
+                    }
                     passthrough.setOnPreferenceChangeListener((preference, newValue) -> {
                         if (!"off".equals(newValue) && "2".equals(channels.getValue())) {
                             channels.setValue("51");
+                        }
+                        if (buffer != null) {
+                            buffer.setVisible(!"off".equals(newValue));
                         }
                         return true;
                     });
                     channels.setOnPreferenceChangeListener((preference, newValue) -> {
                         if ("2".equals(newValue) && !"off".equals(passthrough.getValue())) {
                             passthrough.setValue("off");
+                            if (buffer != null) {
+                                buffer.setVisible(false);
+                            }
                         }
                         return true;
                     });
