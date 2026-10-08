@@ -243,6 +243,22 @@
             android:summary="@string/summary_checkbox_enable_audiofx"
             android:title="@string/title_checkbox_enable_audiofx"
             app:iconSpaceReserved="false" />
+        <com.limelight.preferences.InlineListPreference
+            android:defaultValue="off"
+            android:entries="@array/passthrough_format_names"
+            android:entryValues="@array/passthrough_format_values"
+            android:key="list_passthrough_format"
+            android:summary="@string/summary_list_passthrough_format"
+            android:title="@string/title_list_passthrough_format"
+            app:iconSpaceReserved="false" />
+        <com.limelight.preferences.InlineListPreference
+            android:defaultValue="auto"
+            android:entries="@array/passthrough_buffer_names"
+            android:entryValues="@array/passthrough_buffer_values"
+            android:key="list_passthrough_buffer"
+            android:summary="@string/summary_list_passthrough_buffer"
+            android:title="@string/title_list_passthrough_buffer"
+            app:iconSpaceReserved="false" />
     </PreferenceCategory>
 
     <PreferenceCategory
