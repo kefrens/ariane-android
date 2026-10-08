@@ -193,7 +193,21 @@ final class SettingsSections {
             }
         }
 
+        // Sections replace the "show more" rows; androidx rejects a nested group inside
+        // a group that still collapses its children
+        expandAll(screen);
+
         bindRenderMode(screen);
+    }
+
+    private static void expandAll(PreferenceGroup group) {
+        group.setInitialExpandedChildrenCount(Integer.MAX_VALUE);
+        for (int i = 0; i < group.getPreferenceCount(); i++) {
+            Preference child = group.getPreference(i);
+            if (child instanceof PreferenceGroup) {
+                expandAll((PreferenceGroup) child);
+            }
+        }
     }
 
     /** The section headers and nested sections of a category, in the order they show. */
