@@ -10,6 +10,8 @@
     <!-- Help strings -->
     <string name="help_loading_title">Visionneuse d\'aide</string>
     <string name="help_loading_msg">Chargement de la page d\'aide…</string>
+    <string name="help_error_certificate">Impossible d\'ouvrir la configuration du serveur : le certificat de l\'hôte ne correspond pas à celui de l\'appairage.</string>
+    <string name="help_error_unreachable">Impossible de joindre la page de configuration du serveur. Vérifiez que l\'interface web de l\'hôte est lancée.</string>
 
     <!-- Alignments -->
     <string name="align_left">Aligner à gauche</string>
