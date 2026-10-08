@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A switch drawn in the "off" position, for toggle rows in the in-game panel -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape android:shape="rectangle">
+            <size android:width="44dp" android:height="26dp" />
+            <corners android:radius="13dp" />
+            <solid android:color="@color/ariane_surface_container_high" />
+            <stroke android:width="2dp" android:color="@color/ariane_outline" />
+        </shape>
+    </item>
+    <item android:left="6dp" android:top="6dp" android:right="24dp" android:bottom="6dp">
+        <shape android:shape="oval">
+            <solid android:color="@color/ariane_on_surface_variant" />
+        </shape>
+    </item>
+</layer-list>

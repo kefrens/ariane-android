@@ -757,6 +757,18 @@
     <string name="summary_checkbox_full_screen">Hide system bars with immersive mode</string>
     <string name="game_panel_hint_close">Back returns to the game</string>
     <string name="game_panel_hint_up">Back returns to the previous menu</string>
+    <string name="game_panel_subtitle_host_time">%1$s · %2$d min</string>
+    <string name="game_panel_back_closes">Back closes</string>
+    <string name="game_panel_back_up">Back goes up</string>
+    <string name="game_panel_stats">Stats overlay</string>
+    <string name="game_panel_keyboard">Keyboard</string>
+    <string name="game_panel_mouse_mode">Mouse mode</string>
+    <string name="game_panel_clipboard">Clipboard</string>
+    <string name="game_panel_clipboard_value">Send · Fetch</string>
+    <string name="game_panel_send_keys">Send keys</string>
+    <string name="game_panel_more">More</string>
+    <string name="game_panel_more_options">More options</string>
+    <string name="game_panel_task_manager" translatable="false">Task Mgr</string>
     <string name="settings_search_hint">Search settings</string>
     <string name="settings_search_empty">No setting matches “%1$s”</string>
 </resources>

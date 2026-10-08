@@ -22,6 +22,18 @@
         android:textSize="26sp"
         android:textStyle="bold" />
 
+    <TextView
+        android:id="@+id/gamePanelSubtitle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:paddingLeft="20dp"
+        android:paddingStart="20dp"
+        android:singleLine="true"
+        android:ellipsize="end"
+        android:textColor="?android:attr/textColorSecondary"
+        android:textSize="15sp" />
+
     <ScrollView
         android:id="@+id/gamePanelScroll"
         android:layout_width="match_parent"
@@ -34,19 +46,75 @@
         android:scrollbars="none">
 
         <LinearLayout
-            android:id="@+id/gamePanelList"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical" />
+            android:orientation="vertical">
+
+            <LinearLayout
+                android:id="@+id/gamePanelList"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical" />
+
+            <LinearLayout
+                android:id="@+id/gamePanelKeysSection"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:layout_marginTop="6dp"
+                    android:layout_marginBottom="12dp"
+                    android:background="@color/ariane_surface_container_high" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="10dp"
+                    android:paddingLeft="20dp"
+                    android:paddingStart="20dp"
+                    android:letterSpacing="0.06"
+                    android:text="@string/game_panel_send_keys"
+                    android:textAllCaps="true"
+                    android:textColor="?android:attr/textColorSecondary"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
+
+                <com.limelight.ui.FlowLayout
+                    android:id="@+id/gamePanelKeys"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:paddingLeft="12dp"
+                    android:paddingStart="12dp"
+                    android:paddingBottom="4dp" />
+            </LinearLayout>
+        </LinearLayout>
     </ScrollView>
 
-    <TextView
-        android:id="@+id/gamePanelHint"
+    <LinearLayout
+        android:id="@+id/gamePanelFooter"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="12dp"
-        android:paddingLeft="20dp"
-        android:paddingStart="20dp"
-        android:textColor="?android:attr/textColorSecondary"
-        android:textSize="15sp" />
+        android:orientation="horizontal"
+        android:paddingLeft="12dp"
+        android:paddingStart="12dp">
+
+        <TextView
+            android:id="@+id/gamePanelDisconnect"
+            style="@style/Ariane.PanelButton"
+            android:text="@string/game_menu_disconnect" />
+
+        <TextView
+            android:id="@+id/gamePanelQuit"
+            style="@style/Ariane.PanelButton"
+            android:layout_marginLeft="12dp"
+            android:layout_marginStart="12dp"
+            android:background="@drawable/game_panel_danger_bg"
+            android:text="@string/game_menu_quit_session"
+            android:textColor="@color/ariane_on_error_container" />
+    </LinearLayout>
 </LinearLayout>
