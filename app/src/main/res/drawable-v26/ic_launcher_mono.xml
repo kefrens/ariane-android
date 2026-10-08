@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Themed (monochrome) icon: rocket, trail and horizon line only -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:pathData="M0,78 C36,64 78,70 108,100"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="2" />
+    <path
+        android:pathData="M28,71.5 C38,68 48,63 53.2,55.6"
+        android:strokeColor="#99FFFFFF"
+        android:strokeLineCap="round"
+        android:strokeWidth="3" />
+    <group
+        android:translateX="58"
+        android:translateY="48"
+        android:rotation="32"
+        android:scaleX="0.9"
+        android:scaleY="0.9">
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M0,-24 C6,-16 7,-4 4.5,10 L-4.5,10 C-7,-4 -6,-16 0,-24 Z M-5,0 C-9,3 -12,8 -12,14 C-9,11 -7,10 -4.5,9.5 Z M5,0 C9,3 12,8 12,14 C9,11 7,10 4.5,9.5 Z" />
+    </group>
+</vector>

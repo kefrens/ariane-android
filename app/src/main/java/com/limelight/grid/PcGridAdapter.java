@@ -49,6 +49,22 @@ public class PcGridAdapter extends GenericGridAdapter<PcView.ComputerObject> {
         return itemList.remove(computer);
     }
 
+    // Mirrors what PcView does when the host is clicked
+    private static int getStatusText(ComputerDetails details) {
+        switch (details.state) {
+            case OFFLINE:
+                return R.string.pcview_status_offline;
+            case ONLINE:
+                if (details.pairState != PairingManager.PairState.PAIRED) {
+                    return R.string.pcview_status_not_paired;
+                }
+                return details.runningGameId != 0 ?
+                        R.string.pcview_status_in_game : R.string.pcview_status_online;
+            default:
+                return R.string.pcview_status_checking;
+        }
+    }
+
     @Override
     public void populateView(View parentView, ImageView imgView, RelativeLayout gridMask, ProgressBar prgView, TextView txtView, ImageView overlayView, PcView.ComputerObject obj) {
         imgView.setImageResource(R.drawable.ic_computer);
@@ -72,6 +88,13 @@ public class PcGridAdapter extends GenericGridAdapter<PcView.ComputerObject> {
         }
         else {
             txtView.setAlpha(0.4f);
+        }
+
+        // Say what OK will do, so the host options are not the only way to find out
+        TextView statusView = parentView.findViewById(R.id.grid_status);
+        if (statusView != null) {
+            statusView.setText(getStatusText(obj.details));
+            statusView.setAlpha(txtView.getAlpha());
         }
 
         if (obj.details.state == ComputerDetails.State.OFFLINE) {

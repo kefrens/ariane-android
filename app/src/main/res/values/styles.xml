@@ -2,27 +2,52 @@
 <resources>
 
     <!--
-        Base application theme, dependent on API level. This theme is replaced
-        by AppBaseTheme from res/values-vXX/styles.xml on newer devices.
-
+        Base application theme: Material 3 dark on every API level, with Ariane's
+        colour roles. values-v29 adds the API 29+ window tweaks on top of it.
     -->
-    <style name="AppBaseTheme" parent="Theme.MaterialComponents.NoActionBar">
-        <!--
-            Theme customizations available in newer API levels can go in
-            res/values-vXX/styles.xml, while customizations related to
-            backward-compatibility can go here.
-        -->
+    <style name="Base.AppTheme" parent="Theme.Material3.Dark.NoActionBar">
+        <item name="colorPrimary">@color/ariane_primary</item>
+        <item name="colorOnPrimary">@color/ariane_on_primary</item>
+        <item name="colorPrimaryContainer">@color/ariane_primary_container</item>
+        <item name="colorOnPrimaryContainer">@color/ariane_on_primary_container</item>
+        <item name="colorSecondary">@color/ariane_secondary</item>
+        <item name="colorOnSecondary">@color/ariane_on_secondary</item>
+        <item name="colorSecondaryContainer">@color/ariane_secondary_container</item>
+        <item name="colorOnSecondaryContainer">@color/ariane_on_secondary_container</item>
+        <item name="colorTertiary">@color/ariane_tertiary</item>
+        <item name="colorOnTertiary">@color/ariane_on_tertiary</item>
+        <item name="colorTertiaryContainer">@color/ariane_tertiary_container</item>
+        <item name="colorOnTertiaryContainer">@color/ariane_on_tertiary_container</item>
+        <item name="colorError">@color/ariane_error</item>
+        <item name="colorOnError">@color/ariane_on_error</item>
+        <item name="colorErrorContainer">@color/ariane_error_container</item>
+        <item name="colorOnErrorContainer">@color/ariane_on_error_container</item>
+        <item name="android:colorBackground">@color/ariane_background</item>
+        <item name="colorOnBackground">@color/ariane_on_background</item>
+        <item name="colorSurface">@color/ariane_surface</item>
+        <item name="colorOnSurface">@color/ariane_on_surface</item>
+        <item name="colorSurfaceVariant">@color/ariane_surface_variant</item>
+        <item name="colorOnSurfaceVariant">@color/ariane_on_surface_variant</item>
+        <item name="colorSurfaceContainerLow">@color/ariane_surface_container_low</item>
+        <item name="colorSurfaceContainer">@color/ariane_surface_container</item>
+        <item name="colorSurfaceContainerHigh">@color/ariane_surface_container_high</item>
+        <item name="colorOutline">@color/ariane_outline</item>
+        <item name="colorOutlineVariant">@color/ariane_outline_variant</item>
+        <item name="android:alertDialogTheme">@style/Ariane.AlertDialog</item>
+        <item name="alertDialogTheme">@style/Ariane.AlertDialog.AppCompat</item>
+        <item name="materialAlertDialogTheme">@style/Ariane.AlertDialog.M3</item>
     </style>
+
+    <style name="AppBaseTheme" parent="Base.AppTheme" />
 
     <!-- Application theme. -->
     <style name="AppTheme" parent="AppBaseTheme">
         <!-- All customizations that are NOT specific to a particular API-level can go here. -->
         <item name="android:windowActionBar">false</item>
         <item name="android:windowNoTitle">true</item>
-        <item name="android:statusBarColor">#1A1A1A</item>
-        <item name="android:navigationBarColor">#1A1A1A</item>
-        <item name="android:colorBackground">#1A1A1A</item>
-        <item name="android:windowBackground">#1A1A1A</item>
+        <item name="android:statusBarColor">@color/ariane_background</item>
+        <item name="android:navigationBarColor">@color/ariane_background</item>
+        <item name="android:windowBackground">@color/ariane_background</item>
     </style>
 
     <style name="StreamBaseTheme" parent="AppBaseTheme">
@@ -49,11 +74,35 @@
         <item name="colorButtonNormal">@android:color/white</item>
     </style>
 
-    <style name="SettingsTheme" parent="Theme.AppCompat.NoActionBar">
-        <item name="android:statusBarColor">@android:color/transparent</item>
-        <item name="android:navigationBarColor">@android:color/transparent</item>
-        <item name="android:colorBackground">@android:color/transparent</item>
+    <!-- Settings screens share the app theme on every API level -->
+    <style name="SettingsTheme" parent="AppTheme">
+        <item name="preferenceTheme">@style/Ariane.PreferenceThemeOverlay</item>
+    </style>
+
+    <!-- Side panel that slides in from the right (setting choices on TV) -->
+    <style name="Ariane.SidePanel" parent="AppTheme">
+        <item name="android:windowIsFloating">true</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="windowNoTitle">true</item>
         <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:backgroundDimEnabled">true</item>
+        <item name="android:backgroundDimAmount">0.5</item>
+        <item name="android:windowCloseOnTouchOutside">true</item>
+        <item name="android:windowAnimationStyle">@style/Ariane.SidePanelAnimation</item>
+    </style>
+
+    <style name="Ariane.SidePanelAnimation" parent="@android:style/Animation">
+        <item name="android:windowEnterAnimation">@anim/side_panel_in</item>
+        <item name="android:windowExitAnimation">@anim/side_panel_out</item>
+    </style>
+
+    <!-- On/off settings show a switch instead of a checkbox -->
+    <style name="Ariane.PreferenceThemeOverlay" parent="PreferenceThemeOverlay">
+        <item name="checkBoxPreferenceStyle">@style/Ariane.Preference.Switch</item>
+    </style>
+
+    <style name="Ariane.Preference.Switch" parent="Preference.CheckBoxPreference.Material">
+        <item name="android:widgetLayout">@layout/preference_widget_switch</item>
     </style>
 
     <style name="ExternalDisplayControllerTheme" parent="AppTheme">
@@ -72,4 +121,48 @@
         <attr name="aperture_middle_color" format="color" />
     </declare-styleable>
 
+    <!-- Platform alert dialogs: rounded card in the app's colours, TV-visible buttons -->
+    <style name="Ariane.AlertDialog" parent="@android:style/Theme.Material.Dialog.Alert">
+        <item name="android:windowBackground">@drawable/dialog_bg</item>
+        <item name="android:colorBackground">@color/ariane_surface_container_high</item>
+        <item name="android:colorAccent">@color/ariane_primary</item>
+        <item name="android:colorControlActivated">@color/ariane_primary</item>
+        <item name="android:colorControlHighlight">#3D9CCAFF</item>
+        <item name="android:textColorPrimary">@color/ariane_on_surface</item>
+        <item name="android:textColorSecondary">@color/ariane_on_surface_variant</item>
+        <item name="android:textColorAlertDialogListItem">@color/ariane_on_surface</item>
+        <item name="android:buttonBarButtonStyle">@style/Ariane.DialogButton</item>
+        <item name="android:backgroundDimAmount">0.6</item>
+    </style>
+
+    <style name="Ariane.DialogButton" parent="@android:style/Widget.Material.Button.Borderless.Colored">
+        <item name="android:background">@drawable/dialog_button_bg</item>
+        <item name="android:textColor">@color/dialog_button_text</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:textSize">16sp</item>
+        <item name="android:minHeight">40dp</item>
+        <item name="android:paddingLeft">20dp</item>
+        <item name="android:paddingRight">20dp</item>
+        <item name="android:layout_marginLeft">4dp</item>
+        <item name="android:layout_marginRight">4dp</item>
+        <item name="android:stateListAnimator">@null</item>
+    </style>
+
+    <!-- AndroidX and Material dialogs get the same buttons -->
+    <style name="Ariane.AlertDialog.M3" parent="ThemeOverlay.Material3.MaterialAlertDialog">
+        <item name="buttonBarPositiveButtonStyle">@style/Ariane.DialogButton.M3</item>
+        <item name="buttonBarNegativeButtonStyle">@style/Ariane.DialogButton.M3</item>
+        <item name="buttonBarNeutralButtonStyle">@style/Ariane.DialogButton.M3</item>
+    </style>
+
+    <style name="Ariane.AlertDialog.AppCompat" parent="ThemeOverlay.Material3.Dialog.Alert">
+        <item name="buttonBarPositiveButtonStyle">@style/Ariane.DialogButton.M3</item>
+        <item name="buttonBarNegativeButtonStyle">@style/Ariane.DialogButton.M3</item>
+        <item name="buttonBarNeutralButtonStyle">@style/Ariane.DialogButton.M3</item>
+    </style>
+
+    <style name="Ariane.DialogButton.M3" parent="Widget.Material3.Button.TextButton.Dialog">
+        <item name="backgroundTint">@color/dialog_button_fill</item>
+        <item name="android:textColor">@color/dialog_button_text</item>
+    </style>
 </resources>

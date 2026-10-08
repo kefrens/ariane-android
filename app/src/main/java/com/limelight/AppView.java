@@ -15,8 +15,13 @@ import com.limelight.nvstream.http.NvHTTP;
 import com.limelight.nvstream.http.PairingManager;
 import com.limelight.preferences.PreferenceConfiguration;
 import com.limelight.profiles.ProfilesManager;
+import com.limelight.ui.AmbientBackgroundDrawable;
+import com.limelight.ui.ContextMenuPanel;
 import com.limelight.ui.AdapterFragment;
 import com.limelight.ui.AdapterFragmentCallbacks;
+import com.limelight.ui.DitherNoise;
+import com.limelight.ui.FocusHighlighter;
+import com.limelight.ui.TvOptionsKey;
 import com.limelight.utils.CacheHelper;
 import com.limelight.utils.Dialog;
 import com.limelight.utils.ServerHelper;
@@ -33,11 +38,15 @@ import android.content.SharedPreferences;
 import android.content.res.Configuration;
 import android.graphics.Bitmap;
 import android.graphics.drawable.BitmapDrawable;
+import android.graphics.drawable.Drawable;
+import android.graphics.drawable.LayerDrawable;
+import android.graphics.drawable.TransitionDrawable;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.view.ContextMenu;
+import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -57,6 +66,10 @@ import org.xmlpull.v1.XmlPullParserException;
 
 public class AppView extends AppCompatActivity implements AdapterFragmentCallbacks {
     private AppGridAdapter appGridAdapter;
+    private AbsListView appListView;
+    private Drawable currentBackdrop;
+
+    private static final int BACKDROP_FADE_MS = 400;
     private String uuidString;
     private ShortcutHelper shortcutHelper;
 
@@ -305,6 +318,7 @@ public class AppView extends AppCompatActivity implements AdapterFragmentCallbac
         UiHelper.setLocale(this);
 
         setContentView(R.layout.activity_app_view);
+        AmbientBackgroundDrawable.install(this);
 
         // Allow floating expanded PiP overlays while browsing apps
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -552,24 +566,7 @@ public class AppView extends AppCompatActivity implements AdapterFragmentCallbac
             }
 
             case QUIT_ID: {
-                // Display a confirmation dialog first
-                UiHelper.displayQuitConfirmationDialog(this, new Runnable() {
-                    @Override
-                    public void run() {
-                        suspendGridUpdates = true;
-                        ServerHelper.doQuit(AppView.this, computer,
-                                app.app, managerBinder, new Runnable() {
-                                    @Override
-                                    public void run() {
-                                        // Trigger a poll immediately
-                                        suspendGridUpdates = false;
-                                        if (poller != null) {
-                                            poller.pollNow();
-                                        }
-                                    }
-                                });
-                    }
-                }, null);
+                confirmQuit(app);
                 return true;
             }
 
@@ -656,6 +653,8 @@ public class AppView extends AppCompatActivity implements AdapterFragmentCallbac
                 if (updated) {
                     appGridAdapter.notifyDataSetChanged();
                 }
+
+                updateRunningBanner();
             }
         });
     }
@@ -734,6 +733,122 @@ public class AppView extends AppCompatActivity implements AdapterFragmentCallbac
         });
     }
 
+    // PS5-style backdrop: the focused game's art, blurred and darkened, fills the screen
+    private void updateBackdrop(View itemView) {
+        ImageView artView = itemView.findViewById(R.id.grid_image);
+        if (artView == null || artView.getVisibility() != View.VISIBLE ||
+                !(artView.getDrawable() instanceof BitmapDrawable)) {
+            return;
+        }
+
+        Bitmap blurred = blurForBackdrop(((BitmapDrawable) artView.getDrawable()).getBitmap());
+        if (blurred == null) {
+            return;
+        }
+
+        Drawable next = new LayerDrawable(new Drawable[] {
+                new BitmapDrawable(getResources(), blurred),
+                getResources().getDrawable(R.drawable.tv_backdrop_scrim),
+                DitherNoise.newDrawable()
+        });
+        Drawable previous = currentBackdrop != null ?
+                currentBackdrop : new AmbientBackgroundDrawable(this);
+
+        TransitionDrawable fade = new TransitionDrawable(new Drawable[] { previous, next });
+        fade.setCrossFadeEnabled(true);
+        getWindow().setBackgroundDrawable(fade);
+        fade.startTransition(BACKDROP_FADE_MS);
+        currentBackdrop = next;
+    }
+
+    // Takes a screen-shaped band from the middle of the art and shrinks it to 16x9
+    // pixels. Stretched back to full screen with filtering, that reads as a heavy blur.
+    private static Bitmap blurForBackdrop(Bitmap art) {
+        if (art == null || art.getWidth() < 16 || art.getHeight() < 9) {
+            return null;
+        }
+
+        try {
+            int bandHeight = Math.min(art.getHeight(), art.getWidth() * 9 / 16);
+            Bitmap band = Bitmap.createBitmap(art, 0, (art.getHeight() - bandHeight) / 2,
+                    art.getWidth(), bandHeight);
+            return Bitmap.createScaledBitmap(band, 16, 9, true);
+        } catch (RuntimeException e) {
+            // For example a hardware bitmap that can't be read back
+            return null;
+        }
+    }
+
+    private void confirmQuit(final AppObject app) {
+        // Display a confirmation dialog first
+        UiHelper.displayQuitConfirmationDialog(this, new Runnable() {
+            @Override
+            public void run() {
+                suspendGridUpdates = true;
+                ServerHelper.doQuit(AppView.this, computer,
+                        app.app, managerBinder, new Runnable() {
+                            @Override
+                            public void run() {
+                                // Trigger a poll immediately
+                                suspendGridUpdates = false;
+                                if (poller != null) {
+                                    poller.pollNow();
+                                }
+                            }
+                        });
+            }
+        }, null);
+    }
+
+    // Shows the running game above the posters. With a remote, Resume takes focus
+    // when the banner appears, so one press of OK goes back into the game.
+    private void updateRunningBanner() {
+        View banner = findViewById(R.id.runningBanner);
+        if (banner == null) {
+            return;
+        }
+
+        AppObject running = null;
+        for (int i = 0; i < appGridAdapter.getCount(); i++) {
+            AppObject app = (AppObject) appGridAdapter.getItem(i);
+            if (app.isRunning) {
+                running = app;
+                break;
+            }
+        }
+
+        if (running == null) {
+            boolean hadFocus = banner.hasFocus();
+            banner.setVisibility(View.GONE);
+            if (hadFocus && appListView != null) {
+                appListView.requestFocus();
+            }
+            return;
+        }
+
+        final AppObject runningApp = running;
+        boolean wasHidden = banner.getVisibility() != View.VISIBLE;
+
+        TextView nameView = findViewById(R.id.runningAppName);
+        nameView.setText(runningApp.app.getAppName());
+
+        View resumeButton = findViewById(R.id.runningResume);
+        resumeButton.setOnClickListener(v ->
+                ServerHelper.doStart(AppView.this, runningApp.app, computer, managerBinder, false));
+        findViewById(R.id.runningQuit).setOnClickListener(v -> confirmQuit(runningApp));
+
+        banner.setVisibility(View.VISIBLE);
+        if (wasHidden && !banner.isInTouchMode()) {
+            resumeButton.requestFocus();
+        }
+    }
+
+    @Override
+    public boolean dispatchKeyEvent(KeyEvent event) {
+        // Menu key on the remote opens the focused app's options
+        return TvOptionsKey.handle(this, appListView, event) || super.dispatchKeyEvent(event);
+    }
+
     @Override
     public int getAdapterFragmentLayoutId() {
         return PreferenceConfiguration.readPreferences(AppView.this).smallIconMode ?
@@ -742,6 +857,8 @@ public class AppView extends AppCompatActivity implements AdapterFragmentCallbac
 
     @Override
     public void receiveAbsListView(AbsListView listView) {
+        appListView = listView;
+        FocusHighlighter.setSelectionListener(listView, (view, position) -> updateBackdrop(view));
         listView.setAdapter(appGridAdapter);
         listView.setOnItemClickListener(new OnItemClickListener() {
             @Override
@@ -754,7 +871,7 @@ public class AppView extends AppCompatActivity implements AdapterFragmentCallbac
                     if (prefConfig.resumeWithoutConfirm && lastRunningAppId == app.app.getAppId()) {
                         ServerHelper.doStart(AppView.this, app.app, computer, managerBinder, prefConfig.useVirtualDisplay);
                     } else {
-                        openContextMenu(arg1);
+                        ContextMenuPanel.show(AppView.this, (AbsListView) arg0, arg1);
                     }
                 } else {
                     if (prefConfig.useVirtualDisplay && !(computer.vDisplaySupported && computer.vDisplayDriverReady)) {
@@ -771,7 +888,10 @@ public class AppView extends AppCompatActivity implements AdapterFragmentCallbac
             }
         });
         UiHelper.applyStatusBarPadding(listView);
-        registerForContextMenu(listView);
+        listView.setOnItemLongClickListener((parent, view, position, id) -> {
+            ContextMenuPanel.show(this, (AbsListView) parent, view);
+            return true;
+        });
         listView.requestFocus();
     }
 

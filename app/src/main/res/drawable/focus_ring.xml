@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- TV / D-pad focus indicator: a white rounded outline around the focused item.
+     Used as a view foreground (API 23+) or as the grid selector (older devices). -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_selected="true">
+        <shape android:shape="rectangle">
+            <corners android:radius="@dimen/focus_ring_radius" />
+            <stroke android:width="@dimen/focus_ring_width" android:color="@color/focus_ring" />
+        </shape>
+    </item>
+    <item android:state_focused="true">
+        <shape android:shape="rectangle">
+            <corners android:radius="@dimen/focus_ring_radius" />
+            <stroke android:width="@dimen/focus_ring_width" android:color="@color/focus_ring" />
+        </shape>
+    </item>
+    <item>
+        <color android:color="@android:color/transparent" />
+    </item>
+</selector>

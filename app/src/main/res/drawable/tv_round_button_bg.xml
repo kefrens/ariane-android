@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Round top-bar button; the focused one turns into a lighter disc with a white ring -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_focused="true">
+        <shape android:shape="oval">
+            <solid android:color="@color/ariane_secondary_container" />
+            <stroke android:width="@dimen/focus_ring_width" android:color="@color/focus_ring" />
+        </shape>
+    </item>
+    <item android:state_pressed="true">
+        <shape android:shape="oval">
+            <solid android:color="@color/ariane_surface_container_high" />
+        </shape>
+    </item>
+    <item>
+        <shape android:shape="oval">
+            <solid android:color="@color/ariane_surface_container" />
+        </shape>
+    </item>
+</selector>

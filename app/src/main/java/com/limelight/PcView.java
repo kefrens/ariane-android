@@ -22,8 +22,11 @@ import com.limelight.preferences.GlPreferences;
 import com.limelight.preferences.PreferenceConfiguration;
 import com.limelight.preferences.StreamSettings;
 import com.limelight.profiles.ProfilesManager;
+import com.limelight.ui.AmbientBackgroundDrawable;
+import com.limelight.ui.ContextMenuPanel;
 import com.limelight.ui.AdapterFragment;
 import com.limelight.ui.AdapterFragmentCallbacks;
+import com.limelight.ui.TvOptionsKey;
 import com.limelight.utils.Dialog;
 import com.limelight.utils.HelpLauncher;
 import com.limelight.utils.ServerHelper;
@@ -47,6 +50,7 @@ import android.provider.Settings;
 import android.text.InputFilter;
 import android.text.InputType;
 import android.view.ContextMenu;
+import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -73,6 +77,7 @@ import javax.microedition.khronos.opengles.GL10;
 public class PcView extends AppCompatActivity implements AdapterFragmentCallbacks {
     private RelativeLayout noPcFoundLayout;
     private PcGridAdapter pcGridAdapter;
+    private AbsListView pcListView;
     private ShortcutHelper shortcutHelper;
     private ComputerManagerService.ComputerManagerBinder managerBinder;
     private boolean freezeUpdates, runningPolling, inForeground, completeOnCreateCalled;
@@ -139,6 +144,7 @@ public class PcView extends AppCompatActivity implements AdapterFragmentCallback
 
     private void initializeViews() {
         setContentView(R.layout.activity_pc_view);
+        AmbientBackgroundDrawable.install(this);
 
         UiHelper.notifyNewRootView(this);
 
@@ -883,12 +889,19 @@ public class PcView extends AppCompatActivity implements AdapterFragmentCallback
     }
 
     @Override
+    public boolean dispatchKeyEvent(KeyEvent event) {
+        // Menu key on the remote opens the focused host's options
+        return TvOptionsKey.handle(this, pcListView, event) || super.dispatchKeyEvent(event);
+    }
+
+    @Override
     public int getAdapterFragmentLayoutId() {
         return R.layout.pc_grid_view;
     }
 
     @Override
     public void receiveAbsListView(AbsListView listView) {
+        pcListView = listView;
         listView.setAdapter(pcGridAdapter);
         listView.setOnItemClickListener(new OnItemClickListener() {
             @Override
@@ -898,7 +911,7 @@ public class PcView extends AppCompatActivity implements AdapterFragmentCallback
                 if (computer.details.state == ComputerDetails.State.UNKNOWN ||
                     computer.details.state == ComputerDetails.State.OFFLINE) {
                     // Open the context menu if a PC is offline or refreshing
-                    openContextMenu(arg1);
+                    ContextMenuPanel.show(PcView.this, (AbsListView) arg0, arg1);
                 } else if (computer.details.pairState != PairState.PAIRED) {
                     // Pair an unpaired machine by default
                     doPair(computer.details, null, null);
@@ -908,7 +921,11 @@ public class PcView extends AppCompatActivity implements AdapterFragmentCallback
             }
         });
         UiHelper.applyStatusBarPadding(listView);
-        registerForContextMenu(listView);
+        listView.setOnItemLongClickListener((parent, view, position, id) -> {
+            ContextMenuPanel.show(this, (AbsListView) parent, view);
+            return true;
+        });
+        listView.requestFocus();
     }
 
     public static class ComputerObject {

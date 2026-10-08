@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Host card: lifts to a lighter surface when the remote is on it -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_selected="true">
+        <shape android:shape="rectangle">
+            <corners android:radius="@dimen/focus_ring_radius" />
+            <solid android:color="@color/ariane_secondary_container" />
+        </shape>
+    </item>
+    <item android:state_focused="true">
+        <shape android:shape="rectangle">
+            <corners android:radius="@dimen/focus_ring_radius" />
+            <solid android:color="@color/ariane_secondary_container" />
+        </shape>
+    </item>
+    <item android:state_pressed="true">
+        <shape android:shape="rectangle">
+            <corners android:radius="@dimen/focus_ring_radius" />
+            <solid android:color="@color/ariane_surface_container_high" />
+        </shape>
+    </item>
+    <item>
+        <shape android:shape="rectangle">
+            <corners android:radius="@dimen/focus_ring_radius" />
+            <solid android:color="@color/ariane_surface_container" />
+        </shape>
+    </item>
+</selector>
