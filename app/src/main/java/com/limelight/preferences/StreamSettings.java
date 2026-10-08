@@ -52,6 +52,7 @@ import com.limelight.LimeLog;
 import com.limelight.PcView;
 import com.limelight.R;
 import com.limelight.profiles.ProfilesManager;
+import com.limelight.binding.audio.PassthroughEncoder;
 import com.limelight.binding.input.virtual_controller.keyboard.KeyBoardControllerConfigurationLoader;
 import com.limelight.binding.video.MediaCodecHelper;
 import com.limelight.ui.AmbientBackgroundDrawable;
@@ -353,6 +354,7 @@ public class StreamSettings extends AppCompatActivity {
         public void onCreatePreferences(Bundle bundle, String s) {
             initializePreferences();
             SettingsGroups.regroup(getPreferenceScreen(), requireActivity().getPackageManager());
+            SettingsSections.apply(getPreferenceScreen());
         }
 
         public void initializePreferences() {
@@ -416,6 +418,45 @@ public class StreamSettings extends AppCompatActivity {
                 PreferenceCategory category =
                         (PreferenceCategory) findPreference("category_ui_settings");
                 category.removePreference(findPreference("checkbox_enable_pip"));
+            }
+
+            // Hide surround passthrough if this build doesn't include the encoders
+            if (!PassthroughEncoder.isAvailable()) {
+                PreferenceCategory category =
+                        (PreferenceCategory) findPreference("category_audio_settings");
+                category.removePreference(findPreference("list_passthrough_format"));
+                category.removePreference(findPreference("list_passthrough_buffer"));
+            }
+            else {
+                // Dolby Digital and DTS carry 5.1, so passthrough needs a surround stream:
+                // turning it on lifts stereo to 5.1, and picking stereo turns it off
+                ListPreference passthrough = findPreference("list_passthrough_format");
+                ListPreference channels = findPreference(PreferenceConfiguration.AUDIO_CONFIG_PREF_STRING);
+                // The buffer size only applies while passthrough is on
+                Preference buffer = findPreference("list_passthrough_buffer");
+                if (passthrough != null && channels != null) {
+                    if (buffer != null) {
+                        buffer.setVisible(!"off".equals(passthrough.getValue()));
+                    }
+                    passthrough.setOnPreferenceChangeListener((preference, newValue) -> {
+                        if (!"off".equals(newValue) && "2".equals(channels.getValue())) {
+                            channels.setValue("51");
+                        }
+                        if (buffer != null) {
+                            buffer.setVisible(!"off".equals(newValue));
+                        }
+                        return true;
+                    });
+                    channels.setOnPreferenceChangeListener((preference, newValue) -> {
+                        if ("2".equals(newValue) && !"off".equals(passthrough.getValue())) {
+                            passthrough.setValue("off");
+                            if (buffer != null) {
+                                buffer.setVisible(false);
+                            }
+                        }
+                        return true;
+                    });
+                }
             }
 
             // Fire TV apps are not allowed to use WebViews or browsers, so hide the Help category

@@ -32,11 +32,27 @@ jobs:
           yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "ndk;${NDK_VERSION}" > /dev/null
           echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/${NDK_VERSION}" >> "$GITHUB_ENV"
 
+      # Surround passthrough (AC-3/DTS/TrueHD) needs FFmpeg's encoders. They are built
+      # once and cached until build-ffmpeg.sh changes; without them the app plays PCM.
+      - name: Cache FFmpeg encoder libraries
+        id: ffmpeg-cache
+        uses: actions/cache@v4
+        with:
+          path: app/src/main/jni/ptenc/ffmpeg
+          key: ffmpeg-ptenc-${{ env.NDK_VERSION }}-${{ hashFiles('app/src/main/jni/ptenc/build-ffmpeg.sh') }}
+
+      - name: Build FFmpeg encoders
+        if: steps.ffmpeg-cache.outputs.cache-hit != 'true'
+        run: app/src/main/jni/ptenc/build-ffmpeg.sh
+
       - name: Unit tests
         run: ./gradlew --no-daemon testNonRoot_gameDebugUnitTest
 
       - name: Build debug APK
         run: ./gradlew --no-daemon assembleNonRoot_gameDebug
+
+      - name: Check that the passthrough encoder was packaged
+        run: unzip -l app/build/outputs/apk/nonRoot_game/debug/*arm64-v8a*.apk | grep -q libmoonlight-ptenc.so
 
       - name: Upload debug APKs
         uses: actions/upload-artifact@v4

@@ -34,4 +34,11 @@
 
     <!-- D-pad focus indicator: white reads on every dark surface at 10-foot distance -->
     <color name="focus_ring">#FFFFFFFF</color>
+    <!-- Settings section icons -->
+    <color name="section_blue">#9CCAFF</color>
+    <color name="section_amber">#F3C56B</color>
+    <color name="section_green">#7DD8A0</color>
+    <color name="section_violet">#C4B5FD</color>
+    <color name="section_pink">#F9A8D4</color>
+    <color name="section_orange">#FFB68B</color>
 </resources>

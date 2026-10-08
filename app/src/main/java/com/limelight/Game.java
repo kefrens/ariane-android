@@ -225,6 +225,7 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
     private TextView notificationOverlayView;
     private int requestedNotificationOverlayVisibility = View.GONE;
     private View performanceOverlayView;
+    private String gameModeStatus = "";
 
     private TextView performanceOverlayLite;
 
@@ -401,6 +402,10 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
 
         // Inflate the content
         setContentView(R.layout.activity_game);
+
+        // The manifest asks for minimal post-processing (ALLM / game content type);
+        // honor the user's choice and remember what the display reports.
+        gameModeStatus = applyGameMode();
 
         clipboardSync = new ClipboardSync(this,
                 (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE), prefConfig);
@@ -850,7 +855,8 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
                 decoderRenderer.setRenderTarget(streamContainer.getSurface());
 
                 // Starten Sie die NvConnection
-                conn.start(new AndroidAudioRenderer(Game.this, prefConfig.playHostAudio),
+                conn.start(new AndroidAudioRenderer(Game.this, prefConfig.playHostAudio,
+                                prefConfig.passthroughCodec, prefConfig.passthroughBufferFrames),
                         decoderRenderer, Game.this);
             }
         });
@@ -3678,15 +3684,30 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
         }
     }
 
+    private String applyGameMode() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
+            return getString(R.string.perf_game_mode_old_android);
+        }
+        getWindow().setPreferMinimalPostProcessing(prefConfig.gameMode);
+        if (!prefConfig.gameMode) {
+            return getString(R.string.perf_game_mode_off);
+        }
+        Display display = getWindowManager().getDefaultDisplay();
+        return getString(display.isMinimalPostProcessingSupported()
+                ? R.string.perf_game_mode_requested
+                : R.string.perf_game_mode_unsupported);
+    }
+
     @Override
     public void onPerfUpdate(final String text) {
+        final String gameModeLine = getString(R.string.perf_game_mode, gameModeStatus);
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
                 if(prefConfig.enablePerfOverlayLite){
-                    performanceOverlayLite.setText(text);
+                    performanceOverlayLite.setText(text + "\t " + gameModeLine);
                 }else{
-                    performanceOverlayBig.setText(text);
+                    performanceOverlayBig.setText(text + "\n" + gameModeLine);
                 }
             }
         });

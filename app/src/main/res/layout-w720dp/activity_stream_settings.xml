@@ -90,6 +90,24 @@
         </ScrollView>
     </LinearLayout>
 
+    <!-- Section shortcuts for the category on show; hidden when it has fewer than two -->
+    <ScrollView
+        android:layout_width="68dp"
+        android:layout_height="match_parent"
+        android:clipToPadding="false"
+        android:paddingTop="12dp"
+        android:paddingRight="16dp"
+        android:paddingEnd="16dp"
+        android:scrollbars="none"
+        android:visibility="gone">
+
+        <LinearLayout
+            android:id="@+id/settingsSections"
+            android:layout_width="52dp"
+            android:layout_height="wrap_content"
+            android:orientation="vertical" />
+    </ScrollView>
+
     <FrameLayout
         android:id="@+id/stream_settings"
         android:layout_width="0dp"
