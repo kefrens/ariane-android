@@ -589,7 +589,7 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
         } catch (SecurityException e) {
             // Some Samsung Galaxy S10+/S10e devices throw a SecurityException from
             // WifiLock.acquire() even though we have android.permission.WAKE_LOCK in our manifest.
-            e.printStackTrace();
+            LimeLog.exception(e);
         }
 
         appName = Game.this.getIntent().getStringExtra(EXTRA_APP_NAME);
@@ -616,7 +616,7 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
                 httpConn = new NvHTTP(new ComputerDetails.AddressTuple(host, port), httpsPort, uniqueId, serverCert, PlatformBinding.getCryptoProvider(this));
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            LimeLog.exception(e);
         }
 
         if (appId == StreamConfiguration.INVALID_APP_ID) {
@@ -1348,7 +1348,7 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
             }
         } catch (ClassNotFoundException | NoSuchMethodException | InvocationTargetException |
                  IllegalAccessException e) {
-            e.printStackTrace();
+            LimeLog.exception(e);
         }
     }
 
@@ -1366,7 +1366,7 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
                     // than crashing.
                     enterPictureInPictureMode(getPictureInPictureParams(false));
                 } catch (Exception e) {
-                    e.printStackTrace();
+                    LimeLog.exception(e);
                 }
             }
         }

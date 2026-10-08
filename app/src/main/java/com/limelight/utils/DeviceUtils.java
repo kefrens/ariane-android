@@ -1,5 +1,6 @@
 package com.limelight.utils;
 
+import com.limelight.LimeLog;
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.Intent;
@@ -194,7 +195,7 @@ public final class DeviceUtils {
                 }
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            LimeLog.exception(e);
         }
         return "02:00:00:00:00:00";
     }
@@ -215,7 +216,7 @@ public final class DeviceUtils {
                 }
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            LimeLog.exception(e);
         }
         return "02:00:00:00:00:00";
     }
@@ -237,7 +238,7 @@ public final class DeviceUtils {
                 }
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            LimeLog.exception(e);
         }
         return "02:00:00:00:00:00";
     }
@@ -259,7 +260,7 @@ public final class DeviceUtils {
                 }
             }
         } catch (SocketException e) {
-            e.printStackTrace();
+            LimeLog.exception(e);
         }
         return null;
     }

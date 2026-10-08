@@ -1,6 +1,7 @@
 package com.limelight.binding.input.capture;
 
 
+import com.limelight.LimeLog;
 import android.content.Context;
 import android.hardware.input.InputManager;
 import android.view.MotionEvent;
@@ -53,9 +54,9 @@ public class ShieldCaptureProvider extends InputCaptureProvider {
             methodSetCursorVisibility.invoke(context.getSystemService(Context.INPUT_SERVICE), visible);
             return true;
         } catch (InvocationTargetException e) {
-            e.printStackTrace();
+            LimeLog.exception(e);
         } catch (IllegalAccessException e) {
-            e.printStackTrace();
+            LimeLog.exception(e);
         }
 
         return false;

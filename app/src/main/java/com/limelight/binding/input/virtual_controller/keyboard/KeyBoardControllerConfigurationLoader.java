@@ -377,7 +377,7 @@ public class KeyBoardControllerConfigurationLoader {
             is.read(buffer);
             result = new String(buffer, "utf8");
         } catch (Exception e) {
-            e.printStackTrace();
+            LimeLog.exception(e);
         }
         if (TextUtils.isEmpty(result)) {
             return;
@@ -537,7 +537,7 @@ public class KeyBoardControllerConfigurationLoader {
                         }
                     }
                 } catch (Exception e) {
-                    e.printStackTrace();
+                    LimeLog.exception(e);
                     Toast.makeText(context, context.getString(R.string.wrong_import_format), Toast.LENGTH_SHORT).show();
                 }
             }
@@ -560,7 +560,7 @@ public class KeyBoardControllerConfigurationLoader {
             try {
                 prefEditor.putString(prefKey, element.getConfiguration().toString());
             } catch (JSONException e) {
-                e.printStackTrace();
+                LimeLog.exception(e);
             }
         }
         prefEditor.apply();
@@ -579,7 +579,7 @@ public class KeyBoardControllerConfigurationLoader {
                 try {
                     element.loadConfiguration(new JSONObject(jsonConfig));
                 } catch (JSONException e) {
-                    e.printStackTrace();
+                    LimeLog.exception(e);
 
                     // Remove the corrupt element from the preferences
                     pref.edit().remove(prefKey).apply();

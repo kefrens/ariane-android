@@ -494,7 +494,7 @@ public class KeyBoardController {
                         }
                     }
                 } catch (Exception e) {
-                    e.printStackTrace();
+                    LimeLog.exception(e);
                     Toast.makeText(context, "Error loading custom keys: " + e.getMessage(), Toast.LENGTH_SHORT).show();
                 }
             }
@@ -664,10 +664,10 @@ public class KeyBoardController {
                             
                         } catch (JSONException e) {
                             LimeLog.warning("Error adding key: " + e.getMessage());
-                            e.printStackTrace();
+                            LimeLog.exception(e);
                         } catch (Exception e) {
                             LimeLog.warning("Unexpected error adding key: " + e.getMessage());
-                            e.printStackTrace();
+                            LimeLog.exception(e);
                         }
                     }
                 }
@@ -695,7 +695,7 @@ public class KeyBoardController {
 
         } catch (Exception e) {
             LimeLog.warning("Error loading keyboard configuration: " + e.getMessage());
-            e.printStackTrace();
+            LimeLog.exception(e);
             Toast.makeText(context, context.getString(R.string.keyboard_load_error, e.getMessage()), Toast.LENGTH_SHORT).show();
         }
     }

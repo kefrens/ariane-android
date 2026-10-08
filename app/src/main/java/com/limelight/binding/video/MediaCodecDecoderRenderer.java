@@ -659,17 +659,17 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
             LimeLog.info("Using codec " + selectedDecoderInfo.getName() + " for hardware decoding " + format.getString(MediaFormat.KEY_MIME));
             configured = true;
         } catch (IllegalArgumentException e) {
-            e.printStackTrace();
+            LimeLog.exception(e);
             if (throwOnCodecError) {
                 throw e;
             }
         } catch (IllegalStateException e) {
-            e.printStackTrace();
+            LimeLog.exception(e);
             if (throwOnCodecError) {
                 throw e;
             }
         } catch (IOException e) {
-            e.printStackTrace();
+            LimeLog.exception(e);
             if (throwOnCodecError) {
                 throw new RuntimeException(e);
             }
@@ -834,7 +834,7 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
                         videoDecoder.flush();
                         codecRecoveryType.set(CR_RECOVERY_TYPE_NONE);
                     } catch (IllegalStateException e) {
-                        e.printStackTrace();
+                        LimeLog.exception(e);
 
                         // Something went wrong during the restart, let's use a bigger hammer
                         // and try a reset instead.
@@ -856,13 +856,13 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
                         configureAndStartDecoder(configuredFormat);
                         codecRecoveryType.set(CR_RECOVERY_TYPE_NONE);
                     } catch (IllegalArgumentException e) {
-                        e.printStackTrace();
+                        LimeLog.exception(e);
 
                         // Our Surface is probably invalid, so just stop
                         stopping = true;
                         codecRecoveryType.set(CR_RECOVERY_TYPE_NONE);
                     } catch (IllegalStateException e) {
-                        e.printStackTrace();
+                        LimeLog.exception(e);
 
                         // Something went wrong during the restart, let's use a bigger hammer
                         // and try a reset instead.
@@ -879,13 +879,13 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
                         configureAndStartDecoder(configuredFormat);
                         codecRecoveryType.set(CR_RECOVERY_TYPE_NONE);
                     } catch (IllegalArgumentException e) {
-                        e.printStackTrace();
+                        LimeLog.exception(e);
 
                         // Our Surface is probably invalid, so just stop
                         stopping = true;
                         codecRecoveryType.set(CR_RECOVERY_TYPE_NONE);
                     } catch (IllegalStateException e) {
-                        e.printStackTrace();
+                        LimeLog.exception(e);
 
                         // Something went wrong during the reset, we'll have to resort to
                         // releasing and recreating the decoder now.
@@ -905,7 +905,7 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
                         }
                         codecRecoveryType.set(CR_RECOVERY_TYPE_NONE);
                     } catch (IllegalArgumentException e) {
-                        e.printStackTrace();
+                        LimeLog.exception(e);
 
                         // Our Surface is probably invalid, so just stop
                         stopping = true;
@@ -932,7 +932,7 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
                         LimeLog.info("Waiting to quiesce decoder threads: "+codecRecoveryThreadQuiescedFlags);
                         codecRecoveryMonitor.wait(1000);
                     } catch (InterruptedException e) {
-                        e.printStackTrace();
+                        LimeLog.exception(e);
 
                         // InterruptedException clears the thread's interrupt status. Since we can't
                         // handle that here, we will re-interrupt the thread to set the interrupt
@@ -973,11 +973,11 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
                 if (codecExc.isRecoverable()) {
                     if (codecRecoveryType.compareAndSet(CR_RECOVERY_TYPE_NONE, CR_RECOVERY_TYPE_RESTART)) {
                         LimeLog.info("Decoder requires restart for recoverable CodecException");
-                        e.printStackTrace();
+                        LimeLog.exception(e);
                     }
                     else if (codecRecoveryType.compareAndSet(CR_RECOVERY_TYPE_FLUSH, CR_RECOVERY_TYPE_RESTART)) {
                         LimeLog.info("Decoder flush promoted to restart for recoverable CodecException");
-                        e.printStackTrace();
+                        LimeLog.exception(e);
                     }
                     else if (codecRecoveryType.get() != CR_RECOVERY_TYPE_RESET && codecRecoveryType.get() != CR_RECOVERY_TYPE_RESTART) {
                         throw new IllegalStateException("Unexpected codec recovery type: " + codecRecoveryType.get());
@@ -986,15 +986,15 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
                 else if (!codecExc.isRecoverable()) {
                     if (codecRecoveryType.compareAndSet(CR_RECOVERY_TYPE_NONE, CR_RECOVERY_TYPE_RESET)) {
                         LimeLog.info("Decoder requires reset for non-recoverable CodecException");
-                        e.printStackTrace();
+                        LimeLog.exception(e);
                     }
                     else if (codecRecoveryType.compareAndSet(CR_RECOVERY_TYPE_FLUSH, CR_RECOVERY_TYPE_RESET)) {
                         LimeLog.info("Decoder flush promoted to reset for non-recoverable CodecException");
-                        e.printStackTrace();
+                        LimeLog.exception(e);
                     }
                     else if (codecRecoveryType.compareAndSet(CR_RECOVERY_TYPE_RESTART, CR_RECOVERY_TYPE_RESET)) {
                         LimeLog.info("Decoder restart promoted to reset for non-recoverable CodecException");
-                        e.printStackTrace();
+                        LimeLog.exception(e);
                     }
                     else if (codecRecoveryType.get() != CR_RECOVERY_TYPE_RESET) {
                         throw new IllegalStateException("Unexpected codec recovery type: " + codecRecoveryType.get());
@@ -1013,15 +1013,15 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
             if (codecRecoveryAttempts < CR_MAX_TRIES) {
                 if (codecRecoveryType.compareAndSet(CR_RECOVERY_TYPE_NONE, CR_RECOVERY_TYPE_RESET)) {
                     LimeLog.info("Decoder requires reset for IllegalStateException");
-                    e.printStackTrace();
+                    LimeLog.exception(e);
                 }
                 else if (codecRecoveryType.compareAndSet(CR_RECOVERY_TYPE_FLUSH, CR_RECOVERY_TYPE_RESET)) {
                     LimeLog.info("Decoder flush promoted to reset for IllegalStateException");
-                    e.printStackTrace();
+                    LimeLog.exception(e);
                 }
                 else if (codecRecoveryType.compareAndSet(CR_RECOVERY_TYPE_RESTART, CR_RECOVERY_TYPE_RESET)) {
                     LimeLog.info("Decoder restart promoted to reset for IllegalStateException");
-                    e.printStackTrace();
+                    LimeLog.exception(e);
                 }
                 else if (codecRecoveryType.get() != CR_RECOVERY_TYPE_RESET) {
                     throw new IllegalStateException("Unexpected codec recovery type: " + codecRecoveryType.get());
@@ -1114,7 +1114,7 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
                         videoDecoder.releaseOutputBuffer(nextOutputBuffer, false);
                     } catch (IllegalStateException e) {
                         // This will leak nextOutputBuffer, but there's really nothing else we can do
-                        e.printStackTrace();
+                        LimeLog.exception(e);
                         handleDecoderException(e);
                     }
                 }
@@ -1602,7 +1602,7 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
             try {
                 choreographerHandlerThread.join();
             } catch (InterruptedException e) {
-                e.printStackTrace();
+                LimeLog.exception(e);
 
                 // InterruptedException clears the thread's interrupt status. Since we can't
                 // handle that here, we will re-interrupt the thread to set the interrupt
@@ -1615,7 +1615,7 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
         try {
             rendererThread.join();
         } catch (InterruptedException e) {
-            e.printStackTrace();
+            LimeLog.exception(e);
 
             // InterruptedException clears the thread's interrupt status. Since we can't
             // handle that here, we will re-interrupt the thread to set the interrupt

@@ -389,7 +389,7 @@ public class GameMenu implements Game.GameMenuCallbacks {
                     }
                 }
             } catch (Exception e) {
-                e.printStackTrace();
+                LimeLog.exception(e);
                 Toast.makeText(game,getString(R.string.wrong_import_format),Toast.LENGTH_SHORT).show();
             }
         }

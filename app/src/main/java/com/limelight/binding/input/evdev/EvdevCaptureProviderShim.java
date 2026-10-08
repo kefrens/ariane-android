@@ -1,6 +1,7 @@
 package com.limelight.binding.input.evdev;
 
 
+import com.limelight.LimeLog;
 import android.app.Activity;
 
 import com.limelight.BuildConfig;
@@ -17,7 +18,7 @@ public class EvdevCaptureProviderShim {
             Class providerClass = Class.forName("com.limelight.binding.input.evdev.EvdevCaptureProvider");
             return (InputCaptureProvider) providerClass.getConstructors()[0].newInstance(activity, listener);
         } catch (Exception e) {
-            e.printStackTrace();
+            LimeLog.exception(e);
             throw new RuntimeException(e);
         }
     }

@@ -47,7 +47,7 @@ class ClipboardSync {
                         toast(activity.getString(R.string.send_clipboard_success));
                     }
                 } catch (Exception e) {
-                    e.printStackTrace();
+                    LimeLog.exception(e);
                     toast(activity.getString(R.string.send_clipboard_failed) + e.getMessage());
                 }
             }
@@ -86,7 +86,7 @@ class ClipboardSync {
                     clipboardManager.setPrimaryClip(clipData);
                     toast(activity.getString(R.string.get_clipboard_success));
                 } catch (Exception e) {
-                    e.printStackTrace();
+                    LimeLog.exception(e);
                     toast(activity.getString(R.string.get_clipboard_failed) + e.getMessage());
                 }
                 fetchRunning = false;

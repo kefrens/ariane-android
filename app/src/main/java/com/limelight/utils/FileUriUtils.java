@@ -1,5 +1,6 @@
 package com.limelight.utils;
 
+import com.limelight.LimeLog;
 import android.content.Context;
 import android.net.Uri;
 
@@ -34,27 +35,27 @@ public class FileUriUtils {
                 result.append(temp);
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            LimeLog.exception(e);
         } finally {
             if (reader != null) {
                 try {
                     reader.close();
                 } catch (IOException e) {
-                    e.printStackTrace();
+                    LimeLog.exception(e);
                 }
             }
             if (inputStream != null) {
                 try {
                     inputStream.close();
                 } catch (IOException e) {
-                    e.printStackTrace();
+                    LimeLog.exception(e);
                 }
             }
             if (bufferedReader != null) {
                 try {
                     bufferedReader.close();
                 } catch (IOException e) {
-                    e.printStackTrace();
+                    LimeLog.exception(e);
                 }
             }
         }
@@ -86,14 +87,14 @@ public class FileUriUtils {
             fileOutputStream = new FileOutputStream(file);
             fileOutputStream.write(content.getBytes());
         } catch (Exception e) {
-            e.printStackTrace();
+            LimeLog.exception(e);
             return false;
         } finally {
             if (fileOutputStream != null) {
                 try {
                     fileOutputStream.close();
                 } catch (IOException e) {
-                    e.printStackTrace();
+                    LimeLog.exception(e);
                 }
             }
         }

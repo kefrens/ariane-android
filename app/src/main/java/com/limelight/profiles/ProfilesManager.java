@@ -87,12 +87,12 @@ public class ProfilesManager {
                 }
             } catch (IOException e) {
                 LimeLog.warning("ArtemisProfile: Failed to load profiles from file:" + e);
-                e.printStackTrace();
+                LimeLog.exception(e);
                 return false;
             }
         } catch (Exception e) {
             LimeLog.warning("ArtemisProfile: Failed to load profiles:" + e);
-            e.printStackTrace();
+            LimeLog.exception(e);
             return false;
         }
 
@@ -118,12 +118,12 @@ public class ProfilesManager {
                 gson.toJson(data, writer);
             } catch (IOException e) {
                 LimeLog.warning("ArtemisProfile: Failed to save profiles to file:" + e);
-                e.printStackTrace();
+                LimeLog.exception(e);
                 return false;
             }
         } catch (Exception e) {
             LimeLog.warning("ArtemisProfile: Failed to save profiles:" + e);
-            e.printStackTrace();
+            LimeLog.exception(e);
             return false;
         }
 

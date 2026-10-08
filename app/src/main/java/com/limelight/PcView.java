@@ -575,7 +575,7 @@ public class PcView extends AppCompatActivity implements AdapterFragmentCallback
                 } catch (FileNotFoundException e) {
                     message = getResources().getString(R.string.error_404);
                 } catch (XmlPullParserException | IOException e) {
-                    e.printStackTrace();
+                    LimeLog.exception(e);
                     message = e.getMessage();
                 }
 
@@ -720,7 +720,7 @@ public class PcView extends AppCompatActivity implements AdapterFragmentCallback
                     message = getResources().getString(R.string.error_404);
                 } catch (XmlPullParserException | IOException e) {
                     message = e.getMessage();
-                    e.printStackTrace();
+                    LimeLog.exception(e);
                 }
 
                 final String toastMessage = message;

@@ -120,7 +120,7 @@ public class ShortcutTrampoline extends AppCompatActivity {
                                 } catch (IOException e) {
                                     // If we got an exception, we couldn't send a single WoL packet,
                                     // so fallthrough into the offline error path.
-                                    e.printStackTrace();
+                                    LimeLog.exception(e);
                                 }
                             }
 

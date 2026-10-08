@@ -135,7 +135,7 @@ public class DiskAssetLoader {
                 });
                 return scaledBitmap;
             } catch (IOException e) {
-                e.printStackTrace();
+                LimeLog.exception(e);
                 return null;
             }
         }
@@ -165,7 +165,7 @@ public class DiskAssetLoader {
             CacheHelper.writeInputStreamToOutputStream(input, out, MAX_ASSET_SIZE);
             success = true;
         } catch (IOException e) {
-            e.printStackTrace();
+            LimeLog.exception(e);
         } finally {
             if (!success) {
                 LimeLog.warning("Unable to populate cache with tuple: "+tuple);
