@@ -1,0 +1,96 @@
+name: Release
+
+# Push a tag like v1.0.0 to build signed APKs and publish them as a GitHub release.
+on:
+  push:
+    tags: [ "v*" ]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    env:
+      NDK_VERSION: 27.0.12077973
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Read the version from the tag
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          if ! [[ "$version" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
+            echo "::error::Tag $GITHUB_REF_NAME must look like v1.2.3"
+            exit 1
+          fi
+          # 1.2.3 -> 10203, so every release installs over the previous one
+          code=$(( BASH_REMATCH[1] * 10000 + BASH_REMATCH[2] * 100 + BASH_REMATCH[3] ))
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+          echo "VERSION_CODE=$code" >> "$GITHUB_ENV"
+
+      - name: Restore the release key
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ARIANE_KEYSTORE_BASE64 }}
+        run: |
+          if [ -z "$KEYSTORE_BASE64" ]; then
+            echo "::error::The ARIANE_KEYSTORE_BASE64 secret is missing, see the release steps in the README"
+            exit 1
+          fi
+          echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/ariane-release.keystore"
+          echo "ARIANE_KEYSTORE=$RUNNER_TEMP/ariane-release.keystore" >> "$GITHUB_ENV"
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Install NDK
+        run: |
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "ndk;${NDK_VERSION}" > /dev/null
+          echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/${NDK_VERSION}" >> "$GITHUB_ENV"
+
+      - name: Cache FFmpeg encoder libraries
+        id: ffmpeg-cache
+        uses: actions/cache@v4
+        with:
+          path: app/src/main/jni/ptenc/ffmpeg
+          key: ffmpeg-ptenc-${{ env.NDK_VERSION }}-${{ hashFiles('app/src/main/jni/ptenc/build-ffmpeg.sh') }}
+
+      - name: Build FFmpeg encoders
+        if: steps.ffmpeg-cache.outputs.cache-hit != 'true'
+        run: app/src/main/jni/ptenc/build-ffmpeg.sh
+
+      - name: Build signed release APKs
+        env:
+          ARIANE_KEYSTORE_PASSWORD: ${{ secrets.ARIANE_KEYSTORE_PASSWORD }}
+          ARIANE_KEY_ALIAS: ${{ secrets.ARIANE_KEY_ALIAS }}
+          ARIANE_KEY_PASSWORD: ${{ secrets.ARIANE_KEY_PASSWORD }}
+        run: >
+          ./gradlew --no-daemon assembleNonRoot_gameRelease
+          -ParianeVersionName="$VERSION" -ParianeVersionCode="$VERSION_CODE"
+
+      - name: Name the APKs
+        run: |
+          mkdir dist
+          for apk in app/build/outputs/apk/nonRoot_game/release/*.apk; do
+            abi=$(basename "$apk" | sed -E 's/.*-(arm64-v8a|armeabi-v7a|x86_64|x86)-release.*/\1/')
+            cp "$apk" "dist/Ariane-$VERSION-$abi.apk"
+          done
+          # Refuse to publish anything that isn't signed
+          apksigner="$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)/apksigner"
+          for apk in dist/*.apk; do
+            "$apksigner" verify "$apk"
+          done
+          unzip -l dist/*arm64-v8a.apk | grep -q libmoonlight-ptenc.so
+          ls -l dist
+
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >
+          gh release create "$GITHUB_REF_NAME" dist/*.apk
+          --title "Ariane $VERSION" --generate-notes

@@ -51,6 +51,11 @@ jobs:
       - name: Build debug APK
         run: ./gradlew --no-daemon assembleNonRoot_gameDebug
 
+      # Catches release-only problems (R8 rules, release resources) before a tag is pushed.
+      # Unsigned here: the release key only exists in the release workflow.
+      - name: Build release APK
+        run: ./gradlew --no-daemon assembleNonRoot_gameRelease
+
       - name: Check that the passthrough encoder was packaged
         run: unzip -l app/build/outputs/apk/nonRoot_game/debug/*arm64-v8a*.apk | grep -q libmoonlight-ptenc.so
 
