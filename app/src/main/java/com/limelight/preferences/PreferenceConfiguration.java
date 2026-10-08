@@ -801,8 +801,10 @@ private static int getFramePacingValue(Context context) {
             config.passthroughBufferFrames = 0; // auto
         }
         if (config.passthroughCodec != null &&
-                config.audioConfiguration.equals(MoonBridge.AUDIO_CONFIGURATION_71_SURROUND)) {
-            // Our encoders top out at 5.1, so have the host mix to 5.1 rather than dropping channels here
+                !config.audioConfiguration.equals(MoonBridge.AUDIO_CONFIGURATION_51_SURROUND)) {
+            // Our encoders carry 5.1: have the host mix 7.1 down to 5.1 rather than dropping
+            // channels here, and send 5.1 even if stereo is selected, so passthrough never
+            // ends up as plain 2.0
             config.audioConfiguration = MoonBridge.AUDIO_CONFIGURATION_51_SURROUND;
         }
 

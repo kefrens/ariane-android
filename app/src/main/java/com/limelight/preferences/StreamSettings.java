@@ -427,6 +427,26 @@ public class StreamSettings extends AppCompatActivity {
                 category.removePreference(findPreference("list_passthrough_format"));
                 category.removePreference(findPreference("list_passthrough_buffer"));
             }
+            else {
+                // Dolby Digital and DTS carry 5.1, so passthrough needs a surround stream:
+                // turning it on lifts stereo to 5.1, and picking stereo turns it off
+                ListPreference passthrough = findPreference("list_passthrough_format");
+                ListPreference channels = findPreference(PreferenceConfiguration.AUDIO_CONFIG_PREF_STRING);
+                if (passthrough != null && channels != null) {
+                    passthrough.setOnPreferenceChangeListener((preference, newValue) -> {
+                        if (!"off".equals(newValue) && "2".equals(channels.getValue())) {
+                            channels.setValue("51");
+                        }
+                        return true;
+                    });
+                    channels.setOnPreferenceChangeListener((preference, newValue) -> {
+                        if ("2".equals(newValue) && !"off".equals(passthrough.getValue())) {
+                            passthrough.setValue("off");
+                        }
+                        return true;
+                    });
+                }
+            }
 
             // Fire TV apps are not allowed to use WebViews or browsers, so hide the Help category
             /*if (getActivity().getPackageManager().hasSystemFeature("amazon.hardware.fire_tv")) {
