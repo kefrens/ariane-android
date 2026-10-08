@@ -1,84 +1,64 @@
-# Artemis Android
+# Ariane
 
-Previously named Moonlight Noir
+Ariane is an open source game streaming client for Android TV, Google TV and Android devices. It plays games from your PC through [Apollo](https://github.com/ClassicOldSong/Apollo) or [Sunshine](https://github.com/LizardByte/Sunshine), at home or over the internet.
 
-An open source client for [Apollo](https://github.com/ClassicOldSong/Apollo)/[Sunshine](https://github.com/LizardByte/Sunshine).
+It is built first for the living room: a 4K TV, a remote or a gamepad, and a receiver for surround sound. Phones and tablets keep working too.
 
-Artemis Android will allow you to stream your collection of games from your Windows PC to your Android device,
-whether in your own home or over the internet.
+## What's new in Ariane
 
-Artemis is currently the best fork of Moonlight with loads of optimizations for office usage.
+- **A TV interface.** Home, apps, settings and the in-game menu were redesigned for the remote: a clear focus ring, D-pad paths that make sense, text readable from the sofa, and nothing in the TV's overscan area.
+  - Home shows your hosts as cards, with the running game on top and an "Add host" card at the end of the row.
+  - The apps screen shows box art, with Resume and Quit for the running game and a jump-to-letter search.
+  - The in-game menu is a side panel that leaves the game visible.
+  - Settings use two panes, with categories split into sections, a column of shortcuts to each section, and a search.
+  - Hints show the real buttons of your controller (Xbox or PlayStation), and the controller's Menu button opens host options.
+- **Surround sound passthrough.** Dolby Digital, DTS and TrueHD are sent to your receiver as a bitstream, instead of plain PCM.
+- **TV game mode.** Ariane asks the TV for its low-latency game mode (ALLM) while you stream, and the stats overlay shows whether it was requested. You can turn it off in Settings > Video.
+- **Updated encryption.** The stream is encrypted with OpenSSL 3.5 LTS, replacing OpenSSL 1.1.1, which stopped getting updates in 2023.
+- **Performance.** Frame pacing follows your setting instead of being forced to Balanced, controller input reads its settings once instead of on every event, and the anti-packet-loss ping runs on its own thread.
+- **Up-to-date Android build.** Ariane builds against the Android 16 SDK (API 36) and still runs on Android 5.0 and later.
+- **Cleaner code.** The largest classes were split up, and every change is built and tested by GitHub Actions.
 
-A more seamless experience with virtual display will be Artemis paired with [Apollo](https://github.com/ClassicOldSong/Apollo).
+Ariane keeps everything Artemis added on top of Moonlight, including:
 
-# Features
+- Virtual display and server commands with Apollo, and clipboard sync
+- Custom resolutions, bitrates and refresh rates
+- Several mouse modes (multi-touch, trackpad, local cursor) and a virtual trackpad
+- Custom on-screen buttons and keys, with import and export
+- Video scale modes (fit, fill, stretch), pan and zoom
+- External display mode and SBS 3D for 3D displays
+- Joy-Con support, gamepad motion sensors and rumble options
 
-If you switch back to the main stream version, you'll be missing the following awesome features which are very unlikely to be added there:
+## Download
 
-1. Custom virtual buttons with import and export support.
-2. [Custom resolutions](https://github.com/moonlight-stream/moonlight-android/pull/1349).
-3. Custom bitrates.
-4. [Multiple mouse mode switching](https://github.com/moonlight-stream/moonlight-android/pull/1304) (normal mouse, [multi-touch](https://github.com/moonlight-stream/moonlight-android/pull/1364), touchpad, disabled, local cursor mode).
-5. Optimized virtual gamepad skins and free joystick.
-6. External monitor mode.
-7. Joycon D-pad support.
-8. Simplified performance information display.
-9. [Game back menu](https://github.com/moonlight-stream/moonlight-android/pull/1171).
-10. Custom shortcut commands.
-11. Easy soft keyboard switching.
-12. Portrait mode.
-13. Display on top mode, useful for foldable phones.
-14. [Virtual touchpad space and sensitivity adjustment](https://github.com/moonlight-stream/moonlight-android/issues/1348#issuecomment-2236344729) for playing right-click view games, such as Warcraft.
-15. Force use device's own vibration motor (in case your gamepad's vibration is not effective).
-16. Gamepad debugging page to view gamepad vibration and gyroscope information, as well as Android kernel version information.
-17. Trackpad tap/scrolling support
-18. Natural track pad mode with touch screen
-19. Non-QWERTY keyboard layout support
-20. Quick Meta key with physical BACK button
-21. Frame rate lock fix for some devices
-22. Video scale mode: Fit/Fill/Stretch
-23. View pan/zoom support
-24. Rotate screen in-game
-25. Add option to quit app directly
-26. Samsung DeX scrolling support
-27. Proper click/scroll/right-click for trackpad on generic Android tablet when using local cursor
-28. Virtual Display integration with [Apollo](https://github.com/ClassicOldSong/Apollo)
-29. Server Command integration with [Apollo](https://github.com/ClassicOldSong/Apollo)
-30. Clipboard sync (requires Apollo)
-31. SBS 3D for external Displays (Using AI MiDaS v2 Lite)
+- **Releases:** get the latest APK from the [Releases page](https://github.com/kefrens/ariane-android/releases).
+  - Most TVs and streaming boxes, including the NVIDIA Shield, use the **arm64-v8a** APK.
+  - Some TVs run a 32-bit system; if the arm64-v8a APK doesn't install, use **armeabi-v7a**.
+- **Test builds:** every change on the main branch is built by GitHub Actions. With the [GitHub CLI](https://cli.github.com/), download a build and install it with adb:
 
-# Disclaimer
+  ```
+  gh run download <run-id> -R kefrens/ariane-android -n artemis-debug-apks -D ariane
+  adb install -r ariane/app-nonRoot_game-arm64-v8a-debug.apk
+  ```
 
-This is the `go away` version of Moonlight Android.
-
-I got kicked from Moonlight and Sunshine's Discord server literally for helping people out.
-
-This is what I got for finding a bug, opened an issue, getting no response, troubleshoot myself, fixed the issue myself, shared it by PR to the main repo hoping my efforts can help someone else during the maintainance gap.
-
-Yes, I'm going away. Fixes and improvements on this fork are not necessarily be merged to the main repo either. I have also started [a fork of Sunshine called Apollo](https://github.com/ClassicOldSong/Apollo) and will add useful features that will never get merged by the main repo shortly. [Apollo](https://github.com/ClassicOldSong/Apollo) and [Moonlight Noir](https://github.com/ClassicOldSong/moonlight-android) will no longer be compatible with OG Sunshine and OG Moonlight eventually, but they'll work even better with much more carefully designed features.
-
-The main repo had stayed silent for 5 months, with nobody actually responding to issues, and people are getting totally no help besides the limited FAQ in their Discord server. I tried to answer issues and questions, solve problems within my ablilty but I got kicked out just for helping others.
-
-**PRs for feature improvements are welcomed here unlike the main repo, your ideas are more likely to be appreciated and your efforts are actually being respected. We welcome people who can and willing to share their efforts, helping yourselves and other people in need.**
-
-**Update**: They have contacted me and apologized for this incident, but the fact it **happened** still motivated me to start my own fork.
-
-## Downloads
-* [Download APK directly](https://github.com/ClassicOldSong/moonlight-android/releases)
-* [Use Obtainium](https://apps.obtainium.imranr.dev/redirect?r=obtainium://app/%7B%22id%22%3A%22com.limelight.noir%22%2C%22url%22%3A%22https%3A%2F%2Fgithub.com%2FClassicOldSong%2Fmoonlight-android%22%2C%22author%22%3A%22ClassicOldSong%22%2C%22name%22%3A%22Artemis%22%2C%22additionalSettings%22%3A%22%7B%5C%22apkFilterRegEx%5C%22%3A%5C%22nonRoot%5C%22%2C%5C%22matchGroutToUse%5C%22%3A%5C%22%241%5C%22%2C%5C%22versionExtractionRegEx%5C%22%3A%5C%22v(.%2B)%5C%22%7D%22%7D) (recommended)
+  Test builds install as **Vega**, next to Ariane, so they don't replace your main install.
 
 ## Building
-* Install Android Studio and the Android NDK
-* Run ‘git submodule update --init --recursive’ from within moonlight-android/
-* In moonlight-android/, create a file called ‘local.properties’. Add an ‘ndk.dir=’ property to the local.properties file and set it equal to your NDK directory.
-* Build the APK using Android Studio or gradle
 
-## Authors
+1. Install Android Studio and the Android NDK.
+2. Run `git submodule update --init --recursive` in the repository.
+3. Optional, for surround passthrough: run `app/src/main/jni/ptenc/build-ffmpeg.sh` to build FFmpeg's encoders. Without them, the app plays PCM audio.
+4. Build with Android Studio, or with `./gradlew assembleNonRoot_gameDebug`.
 
-* [Cameron Gutman](https://github.com/cgutman)  
-* [Diego Waxemberg](https://github.com/dwaxemberg)  
-* [Aaron Neyer](https://github.com/Aaronneyer)  
-* [Andrew Hennessy](https://github.com/yetanothername)
+## A fork of a fork
 
-Moonlight is the work of students at [Case Western](http://case.edu) and was
-started as a project at [MHacks](http://mhacks.org).
+Ariane builds on the work of two projects:
+
+- [Moonlight Android](https://github.com/moonlight-stream/moonlight-android), the original client, by [Cameron Gutman](https://github.com/cgutman), [Diego Waxemberg](https://github.com/dwaxemberg), [Aaron Neyer](https://github.com/Aaronneyer) and [Andrew Hennessy](https://github.com/yetanothername). Moonlight started as a student project at Case Western Reserve University.
+- [Artemis](https://github.com/ClassicOldSong/moonlight-android) (previously Moonlight Noir), by [ClassicOldSong](https://github.com/ClassicOldSong) and its contributors, which added Apollo integration and most of the features listed above.
+
+Thank you to everyone who worked on them.
+
+## License
+
+Ariane is released under the GNU General Public License v3.0, like Moonlight. See [LICENSE.txt](LICENSE.txt).
