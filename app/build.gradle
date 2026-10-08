@@ -93,12 +93,25 @@ android {
         }
     }
 
+    signingConfigs {
+        // Shared debug key kept in the repo, so every Vega build (local or CI) has the
+        // same signature and installs over the previous one with `adb install -r`,
+        // keeping paired hosts. It only signs debug builds and is not a secret.
+        debug {
+            storeFile file('ariane-debug.keystore')
+            storePassword 'android'
+            keyAlias 'androiddebugkey'
+            keyPassword 'android'
+        }
+    }
+
     buildTypes {
         debug {
+            signingConfig signingConfigs.debug
             applicationIdSuffix ".noirdebug"
-            resValue "string", "app_label", "Diana"
-            resValue "string", "app_label_root", "Diana (Root)"
-            resValue "string", "app_label_game", "Diana (Game)"
+            resValue "string", "app_label", "Vega"
+            resValue "string", "app_label_root", "Vega (Root)"
+            resValue "string", "app_label_game", "Vega (Game)"
 
             minifyEnabled true
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
@@ -135,9 +148,9 @@ android {
             //
             // TL;DR: Leave the following line alone!
             applicationIdSuffix ".noir"
-            resValue "string", "app_label", "Artemis"
-            resValue "string", "app_label_root", "Artemis (Root)"
-            resValue "string", "app_label_game", "Artemis (Game)"
+            resValue "string", "app_label", "Ariane"
+            resValue "string", "app_label_root", "Ariane (Root)"
+            resValue "string", "app_label_game", "Ariane (Game)"
 
             minifyEnabled true
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'

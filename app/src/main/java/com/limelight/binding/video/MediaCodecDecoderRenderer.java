@@ -23,7 +23,6 @@ import com.limelight.utils.Stereo3DRenderer;
 import com.limelight.utils.TrafficStatsHelper;
 
 import android.annotation.SuppressLint;
-import android.util.LongSparseArray;
 import android.annotation.TargetApi;
 import android.app.Activity;
 import android.content.Context;
@@ -54,11 +53,10 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
     /** Toggle tight frame pacing thresholds globally. */
     public void setForceTightThresholds(boolean v) { this.forceTightThresholds = v; }
     // Toggle at runtime if needed
-    // Decode latency tracking: map PTS(us) -> enqueue time (ns)
-    private final LongSparseArray<Long> enqueueNsByPtsUs = new LongSparseArray<>();
+    // Decode latency tracking: PTS(us) -> enqueue time (ns), shared by the input and renderer threads
+    private final DecodeLatencyTracker decodeLatencyTracker = new DecodeLatencyTracker();
 
-    // When preferLowerDelays=true we use this configurable timeout (µs) for output dequeue.
-// When preferLowerDelays=false we force 0µs (non-blocking, latest-frame rendering).
+    // Timeout (µs) for output dequeue: preferLowerDelaysTimeoutUs, at least 250 µs when preferLowerDelays=true.
     private volatile int preferLowerDelaysTimeoutUs = 2000;
     public void setPreferLowerDelaysTimeoutUs(int us) { this.preferLowerDelaysTimeoutUs = Math.max(0, us); }
 
@@ -84,9 +82,8 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
 
     // Update stats using real decode time: enqueue->dequeue, instead of uptime - PTS
     private void updateDecodeLatencyStats(long presentationTimeUs) {
-        Long enqNs = enqueueNsByPtsUs.get(presentationTimeUs);
-        if (enqNs != null) {
-            enqueueNsByPtsUs.delete(presentationTimeUs);
+        long enqNs = decodeLatencyTracker.take(presentationTimeUs);
+        if (enqNs >= 0) {
             long decMs = (System.nanoTime() - enqNs) / 1_000_000L;
             if (decMs >= 0 && decMs < 1000) {
                 activeWindowVideoStats.decoderTimeMs += decMs;
@@ -1207,12 +1204,15 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
                 double ewmaJitterNs            = periodNs * 0.1;
 
                 BufferInfo info = new BufferInfo();
-                long lastOutputNs = System.nanoTime();
+                // Latest-frame-only rendering is the minimum latency pacing mode. Other modes
+                // go through the pacing logic below (and the Choreographer for Balanced).
+                final boolean latestOnly = !preferLowerDelays &&
+                        prefs.framePacing == PreferenceConfiguration.FRAME_PACING_MIN_LATENCY;
                 while (!stopping) {
                     /* LATEST_ONLY_LOW_LATENCY */
-                    if (!preferLowerDelays) {
+                    if (latestOnly) {
                         try {
-                            android.media.MediaCodec.BufferInfo __tmpInfo = new android.media.MediaCodec.BufferInfo();
+                            final BufferInfo __tmpInfo = info;
                             int __idx = videoDecoder.dequeueOutputBuffer(__tmpInfo, 0);
                             int __last = -1;
                             long __lastPtsUs = -1L;
@@ -1475,23 +1475,6 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
                         doCodecRecoveryIfRequired(CR_FLAG_RENDER_THREAD);
                     }
                 }
-
-                /* WATCHDOG_C2_SLEEP */
-                try {
-                    final long __nowNs = System.nanoTime();
-                    if (__nowNs - lastOutputNs > 1_200_000_000L) { // ~1.2s without output → likely C2 sleep
-                        LimeLog.warning("Decoder watchdog: no output >1.2s, flushing codec to recover...");
-                        try {
-                            videoDecoder.flush();
-                        } catch (Throwable ignored) {}
-                        try {
-                            android.os.Bundle __poke = new android.os.Bundle();
-                            __poke.putInt("priority", 0);
-                            videoDecoder.setParameters(__poke);
-                        } catch (Throwable ignored) {}
-                        lastOutputNs = __nowNs;
-                    }
-                } catch (Throwable ignored) {}
             }
         };
         rendererThread.setName("Video - Renderer (MediaCodec)");
@@ -1685,7 +1668,7 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
                     timestampUs, codecFlags);
 
             // Track enqueue time for this PTS
-            try { enqueueNsByPtsUs.put(timestampUs, System.nanoTime()); } catch (Throwable ignored) {}
+            decodeLatencyTracker.record(timestampUs, System.nanoTime());
 
             // We need a new buffer now
             nextInputBufferIndex = -1;

@@ -12,7 +12,6 @@ import android.graphics.RectF;
 import android.graphics.drawable.Drawable;
 import android.view.MotionEvent;
 
-import com.limelight.preferences.PreferenceConfiguration;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -159,10 +158,10 @@ public class DigitalButton extends VirtualControllerElement {
         rect.bottom = getHeight() - rect.top;
 
         //皮肤选择 官方皮肤
-        if(PreferenceConfiguration.readPreferences(getContext()).enableOnScreenStyleOfficial){
+        if(virtualController.getPreferences().enableOnScreenStyleOfficial){
             paint.setStyle(Paint.Style.STROKE);
             //方形
-            if(PreferenceConfiguration.readPreferences(getContext()).enableKeyboardSquare){
+            if(virtualController.getPreferences().enableKeyboardSquare){
                 canvas.drawRect(rect,paint);
             }else{
                 canvas.drawOval(rect, paint);
@@ -172,7 +171,7 @@ public class DigitalButton extends VirtualControllerElement {
             canvas.drawText(text, getPercent(getWidth(), 50), getPercent(getHeight(), 63), paint);
             return;
         }
-        int oscOpacity=PreferenceConfiguration.readPreferences(getContext()).oscOpacity;
+        int oscOpacity=virtualController.getPreferences().oscOpacity;
         //虚拟手柄皮肤
         if (icon != -1) {
             Drawable d = getResources().getDrawable(isPressed()?iconPress:icon);

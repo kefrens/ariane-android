@@ -25,8 +25,10 @@ public class LayoutInflationTest {
     @Test
     public void allLayoutsInflateSuccessfully() throws IllegalAccessException {
         Context base = ApplicationProvider.getApplicationContext();
+        // Material Components widgets (e.g. ExtendedFloatingActionButton) require a
+        // MaterialComponents theme, which also satisfies AppCompat widgets
         Context context = new androidx.appcompat.view.ContextThemeWrapper(base,
-                androidx.appcompat.R.style.Theme_AppCompat);
+                com.google.android.material.R.style.Theme_MaterialComponents);
         for (int layoutId : getAllLayoutResourceIds()) {
             try {
                 LayoutInflater.from(context).inflate(layoutId, null);
