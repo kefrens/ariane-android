@@ -1,0 +1,61 @@
+name: Build OpenSSL
+
+# Rebuilds the prebuilt static OpenSSL libraries with the NDK when the build
+# script changes, uploads them as an artifact, and on a pull request from this
+# repository commits them into app/src/main/jni/moonlight-core/openssl/.
+on:
+  pull_request:
+    paths:
+      - app/src/main/jni/moonlight-core/build-openssl.sh
+      - .github/workflows/build-openssl.yml
+  workflow_dispatch:
+
+jobs:
+  build-openssl:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      NDK_VERSION: 27.0.12077973
+      OPENSSL_TAG: openssl-3.5.9
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref || github.ref }}
+
+      - name: Install NDK
+        run: |
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "ndk;${NDK_VERSION}" > /dev/null
+          echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/${NDK_VERSION}" >> "$GITHUB_ENV"
+
+      - name: Fetch OpenSSL
+        run: git clone --depth 1 --branch "$OPENSSL_TAG" https://github.com/openssl/openssl.git "$RUNNER_TEMP/openssl-src"
+
+      - name: Build
+        working-directory: ${{ runner.temp }}/openssl-src
+        run: OUTPUT_DIR="$RUNNER_TEMP/openssl-out" "$GITHUB_WORKSPACE/app/src/main/jni/moonlight-core/build-openssl.sh"
+
+      - name: Upload libraries
+        uses: actions/upload-artifact@v4
+        with:
+          name: openssl-android
+          path: ${{ runner.temp }}/openssl-out/
+
+      - name: Commit libraries to the pull request
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+        run: |
+          dest=app/src/main/jni/moonlight-core/openssl
+          for abi in armeabi-v7a arm64-v8a x86 x86_64; do
+            cp "$RUNNER_TEMP/openssl-out/$abi/libcrypto.a" "$RUNNER_TEMP/openssl-out/$abi/libssl.a" "$dest/$abi/"
+          done
+          rm -rf "$dest/include"
+          cp -R "$RUNNER_TEMP/openssl-out/include" "$dest/include"
+          git add "$dest"
+          if git diff --cached --quiet; then
+            echo "Libraries unchanged"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Update prebuilt OpenSSL to $OPENSSL_TAG"
+          git push
