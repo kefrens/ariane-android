@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [ "moonlight-noir" ]
+    branches: [ "ariane-main" ]
   pull_request:
   workflow_dispatch:
 
