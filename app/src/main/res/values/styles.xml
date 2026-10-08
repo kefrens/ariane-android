@@ -136,7 +136,7 @@
     </style>
 
     <!-- Disconnect / Quit session at the foot of the in-game panel -->
-    <style name="Ariane.PanelButton">
+    <style name="Ariane.PanelButton" parent="">
         <item name="android:layout_width">wrap_content</item>
         <item name="android:layout_height">48dp</item>
         <item name="android:background">@drawable/game_panel_button_bg</item>
