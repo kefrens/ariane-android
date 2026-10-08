@@ -1,8 +1,8 @@
 name: Build OpenSSL
 
 # Rebuilds the prebuilt static OpenSSL libraries with the NDK when the build
-# script changes, and uploads them as an artifact to commit into
-# app/src/main/jni/moonlight-core/openssl/.
+# script changes, uploads them as an artifact, and on a pull request from this
+# repository commits them into app/src/main/jni/moonlight-core/openssl/.
 on:
   pull_request:
     paths:
@@ -13,11 +13,15 @@ on:
 jobs:
   build-openssl:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     env:
       NDK_VERSION: 27.0.12077973
       OPENSSL_TAG: openssl-3.5.9
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref || github.ref }}
 
       - name: Install NDK
         run: |
@@ -36,3 +40,22 @@ jobs:
         with:
           name: openssl-android
           path: ${{ runner.temp }}/openssl-out/
+
+      - name: Commit libraries to the pull request
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+        run: |
+          dest=app/src/main/jni/moonlight-core/openssl
+          for abi in armeabi-v7a arm64-v8a x86 x86_64; do
+            cp "$RUNNER_TEMP/openssl-out/$abi/libcrypto.a" "$RUNNER_TEMP/openssl-out/$abi/libssl.a" "$dest/$abi/"
+          done
+          rm -rf "$dest/include"
+          cp -R "$RUNNER_TEMP/openssl-out/include" "$dest/include"
+          git add "$dest"
+          if git diff --cached --quiet; then
+            echo "Libraries unchanged"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Update prebuilt OpenSSL to $OPENSSL_TAG"
+          git push
