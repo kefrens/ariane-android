@@ -1,7 +1,9 @@
 package com.limelight.grid;
 
 import android.content.Context;
+import android.view.LayoutInflater;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.RelativeLayout;
@@ -47,6 +49,52 @@ public class PcGridAdapter extends GenericGridAdapter<PcView.ComputerObject> {
 
     public boolean removeComputer(PcView.ComputerObject computer) {
         return itemList.remove(computer);
+    }
+
+    // The row always ends with an "Add host" card, which has no computer behind it.
+    // Use getComputerCount() and getComputer() to walk the hosts only.
+    public int getComputerCount() {
+        return itemList.size();
+    }
+
+    public PcView.ComputerObject getComputer(int i) {
+        return itemList.get(i);
+    }
+
+    public boolean isAddCard(int i) {
+        return i == itemList.size();
+    }
+
+    @Override
+    public int getCount() {
+        return itemList.size() + 1;
+    }
+
+    // Null for the "Add host" card
+    @Override
+    public Object getItem(int i) {
+        return isAddCard(i) ? null : itemList.get(i);
+    }
+
+    @Override
+    public int getViewTypeCount() {
+        return 2;
+    }
+
+    @Override
+    public int getItemViewType(int i) {
+        return isAddCard(i) ? 1 : 0;
+    }
+
+    @Override
+    public View getView(int i, View convertView, ViewGroup viewGroup) {
+        if (isAddCard(i)) {
+            if (convertView == null) {
+                convertView = LayoutInflater.from(context).inflate(R.layout.pc_add_item, viewGroup, false);
+            }
+            return convertView;
+        }
+        return super.getView(i, convertView, viewGroup);
     }
 
     // Mirrors what PcView does when the host is clicked

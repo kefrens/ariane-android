@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Left and Right on the D-pad -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="40dp" android:height="28dp"
+    android:viewportWidth="34" android:viewportHeight="24">
+    <path android:fillColor="#FF3A4552"
+        android:pathData="M7,4h20a6,6 0,0 1,6 6v4a6,6 0,0 1,-6 6H7a6,6 0,0 1,-6 -6v-4a6,6 0,0 1,6 -6z" />
+    <path android:fillColor="#FFFFFFFF" android:pathData="M10.5,8.5v7L6,12zM23.5,8.5v7L28,12z" />
+</vector>

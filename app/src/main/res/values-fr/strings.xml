@@ -123,6 +123,17 @@
     <string name="applist_running_now">En cours</string>
     <string name="applist_resume">Reprendre</string>
     <string name="applist_quit">Quitter le jeu</string>
+    <string name="home_running_on">En cours sur %1$s</string>
+    <string name="home_running_unknown_app">Un jeu</string>
+    <string name="home_add_host">Ajouter un hôte</string>
+    <string name="home_add_host_detail">Par adresse IP</string>
+    <string name="hint_open">Ouvrir</string>
+    <string name="hint_host_options">Options de l\'hôte</string>
+    <string name="hint_move_hosts">Changer d\'hôte</string>
+    <string name="applist_search">Rechercher</string>
+    <string name="applist_jump_title">Aller à la lettre</string>
+    <string name="seek_panel_hint">◀ ▶  pour modifier, OK pour enregistrer</string>
+    <string name="seek_panel_save">Enregistrer</string>
     <string name="applist_all_apps">Tous les jeux</string>
     <string name="delete_pc_msg">Êtes-vous sûr de vouloir supprimer ce PC ?</string>
     <string name="slow_connection_msg">Connexion lente au PC\nRéduisez votre débit</string>
