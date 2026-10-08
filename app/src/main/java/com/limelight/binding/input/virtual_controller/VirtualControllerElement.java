@@ -41,7 +41,7 @@ public abstract class VirtualControllerElement<C extends ElementHost> extends Vi
     public static final int EID_TOUCHPAD = 65;
 
     protected final C virtualController;
-    protected final String elementId;
+    public final String elementId;
 
     private final Paint paint = new Paint();
 
