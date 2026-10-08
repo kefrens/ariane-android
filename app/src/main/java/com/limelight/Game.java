@@ -79,6 +79,7 @@ import android.net.wifi.WifiManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.SystemClock;
 import android.os.HandlerThread;
 import android.os.IBinder;
 import android.os.VibrationEffect;
@@ -293,6 +294,8 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
 
     public boolean isInputOnly = true;
     public boolean allowChangeMouseMode = true;
+    private int currentMouseMode = -1;
+    private long streamStartedAtMs;
     private boolean onExternelDisplay = false;
     private ImageButton floatingMenuButton;
     private ImageButton overlayToggleButton;
@@ -3415,6 +3418,9 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
 
                 connected = true;
                 connecting = false;
+                if (streamStartedAtMs == 0) {
+                    streamStartedAtMs = SystemClock.elapsedRealtime();
+                }
                 updatePipAutoEnter();
 
                 // Hide the mouse cursor now after a short delay.
@@ -3896,6 +3902,7 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
     }
 
     private void applyMouseMode(int mode) {
+        currentMouseMode = mode;
         switch (mode) {
             case 0: // Multi-touch
                 prefConfig.enableMultiTouchScreen = true;
@@ -3935,6 +3942,29 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
         // Always exit zoom mode if mouse mode has changed
         isPanZoomMode = false;
         updateZoomButtonAppearance();
+    }
+
+    public String getAppName() {
+        return appName;
+    }
+
+    public String getPcName() {
+        return pcName;
+    }
+
+    // When the stream first started, on the elapsedRealtime clock, or 0 before it has
+    public long getStreamStartedAtMs() {
+        return streamStartedAtMs;
+    }
+
+    public boolean isPerfOverlayEnabled() {
+        return prefConfig.enablePerfOverlay;
+    }
+
+    // The name of the touch mouse mode in use, or null before one is applied
+    public String getMouseModeLabel() {
+        String[] modes = getResources().getStringArray(R.array.mouse_mode_names);
+        return currentMouseMode >= 0 && currentMouseMode < modes.length ? modes[currentMouseMode] : null;
     }
 
     public void toggleHUD() {

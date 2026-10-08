@@ -5,7 +5,9 @@ import android.app.AlertDialog;
 import android.app.Dialog;
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
 import android.os.Handler;
+import android.os.SystemClock;
 import android.text.TextUtils;
 import android.view.ContextThemeWrapper;
 import android.view.Gravity;
@@ -14,6 +16,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
@@ -53,6 +56,8 @@ public class GameMenu implements Game.GameMenuCallbacks {
         private final Runnable runnable;
         private int iconRes;
         private boolean opensSubmenu;
+        private Toggle toggle;
+        private String value;
 
         public MenuOption(String label, boolean withGameFocus, Runnable runnable) {
             this.label = label;
@@ -74,6 +79,32 @@ public class GameMenu implements Game.GameMenuCallbacks {
             this.opensSubmenu = true;
             return this;
         }
+
+        // The option is an on/off switch: it stays in the panel and redraws its switch
+        public MenuOption toggle(Toggle toggle) {
+            this.toggle = toggle;
+            return this;
+        }
+
+        // The current choice, shown at the end of the row
+        public MenuOption value(String value) {
+            this.value = value;
+            return this;
+        }
+    }
+
+    public interface Toggle {
+        boolean isOn();
+    }
+
+    private static class KeyChip {
+        final String label;
+        final short[] keys;
+
+        KeyChip(String label, short[] keys) {
+            this.label = label;
+            this.keys = keys;
+        }
     }
 
     private final Game game;
@@ -81,10 +112,14 @@ public class GameMenu implements Game.GameMenuCallbacks {
 
     private Dialog currentDialog;
     private TextView panelTitle;
-    private TextView panelHint;
+    private TextView panelSubtitle;
     private LinearLayout panelList;
+    private View panelKeysSection;
+    private ViewGroup panelKeys;
+    private View panelFooter;
     private ScrollView panelScroll;
     private Runnable panelBack;
+    private GameInputDevice menuDevice;
 
     public GameMenu(Game game, Context dialogScreenContext) {
         this.game = game;
@@ -131,24 +166,35 @@ public class GameMenu implements Game.GameMenuCallbacks {
         }
     }
 
+    private boolean hasTouchscreen() {
+        return game.getPackageManager().hasSystemFeature(PackageManager.FEATURE_TOUCHSCREEN);
+    }
+
     private void showMenuDialog(String title, MenuOption[] options, Runnable onBack) {
+        showMenuDialog(title, getString(R.string.game_panel_back_up), options, onBack, null);
+    }
+
+    // keyChips is only given for the top menu, which also gets the Disconnect and Quit buttons
+    private void showMenuDialog(String title, String subtitle, MenuOption[] options, Runnable onBack,
+                                KeyChip[] keyChips) {
         if (currentDialog == null || !currentDialog.isShowing()) {
             createPanel();
         }
 
         panelBack = onBack;
         panelTitle.setText(title);
-        panelHint.setText(onBack != null ? R.string.game_panel_hint_up : R.string.game_panel_hint_close);
+        panelSubtitle.setText(subtitle);
 
         LayoutInflater inflater = LayoutInflater.from(currentDialog.getContext());
         panelList.removeAllViews();
         for (MenuOption option : options) {
-            TextView item = (TextView) inflater.inflate(R.layout.settings_category_item, panelList, false);
-            item.setText(option.label);
-            item.setCompoundDrawablesRelativeWithIntrinsicBounds(option.iconRes, 0,
-                    option.opensSubmenu ? R.drawable.ic_chevron_right : 0, 0);
+            View item = inflater.inflate(R.layout.game_panel_item, panelList, false);
+            bindItem(item, option);
             item.setOnClickListener(v -> {
-                if (option.opensSubmenu) {
+                if (option.toggle != null) {
+                    run(option);
+                    bindItem(item, option);
+                } else if (option.opensSubmenu) {
                     if (option.runnable != null) {
                         option.runnable.run();
                     }
@@ -160,6 +206,25 @@ public class GameMenu implements Game.GameMenuCallbacks {
             panelList.addView(item);
         }
 
+        panelKeys.removeAllViews();
+        if (keyChips != null) {
+            for (KeyChip chip : keyChips) {
+                TextView view = (TextView) inflater.inflate(R.layout.game_panel_chip, panelKeys, false);
+                view.setText(chip.label);
+                view.setOnClickListener(v -> {
+                    if (chip.keys == null) {
+                        showSpecialKeysMenu();
+                    } else {
+                        hideMenu();
+                        sendKeys(chip.keys);
+                    }
+                });
+                panelKeys.addView(view);
+            }
+        }
+        panelKeysSection.setVisibility(keyChips != null ? View.VISIBLE : View.GONE);
+        panelFooter.setVisibility(keyChips != null ? View.VISIBLE : View.GONE);
+
         panelScroll.scrollTo(0, 0);
         View first = panelList.getChildAt(0);
         if (first != null) {
@@ -167,13 +232,57 @@ public class GameMenu implements Game.GameMenuCallbacks {
         }
     }
 
+    private void bindItem(View item, MenuOption option) {
+        ImageView icon = item.findViewById(R.id.panelItemIcon);
+        TextView label = item.findViewById(R.id.panelItemLabel);
+        TextView value = item.findViewById(R.id.panelItemValue);
+        ImageView end = item.findViewById(R.id.panelItemEnd);
+
+        if (option.iconRes != 0) {
+            icon.setImageResource(option.iconRes);
+            icon.setVisibility(View.VISIBLE);
+        } else {
+            icon.setVisibility(View.GONE);
+        }
+        label.setText(option.label);
+
+        value.setText(option.value);
+        value.setVisibility(option.value != null ? View.VISIBLE : View.GONE);
+
+        int endRes = 0;
+        if (option.toggle != null) {
+            boolean on = option.toggle.isOn();
+            endRes = on ? R.drawable.panel_switch_on : R.drawable.panel_switch_off;
+            item.setContentDescription(option.label + ", " + getString(on ? R.string.yes : R.string.no));
+        } else if (option.opensSubmenu) {
+            endRes = R.drawable.ic_chevron_right;
+        }
+        if (endRes != 0) {
+            end.setImageResource(endRes);
+            end.setVisibility(View.VISIBLE);
+        } else {
+            end.setVisibility(View.GONE);
+        }
+    }
+
     private void createPanel() {
         final Dialog dialog = new Dialog(dialogScreenContext, R.style.Ariane_SidePanel);
         View root = LayoutInflater.from(dialog.getContext()).inflate(R.layout.game_panel, null);
         panelTitle = root.findViewById(R.id.gamePanelTitle);
-        panelHint = root.findViewById(R.id.gamePanelHint);
+        panelSubtitle = root.findViewById(R.id.gamePanelSubtitle);
         panelList = root.findViewById(R.id.gamePanelList);
         panelScroll = root.findViewById(R.id.gamePanelScroll);
+        panelKeysSection = root.findViewById(R.id.gamePanelKeysSection);
+        panelKeys = root.findViewById(R.id.gamePanelKeys);
+        panelFooter = root.findViewById(R.id.gamePanelFooter);
+        root.findViewById(R.id.gamePanelDisconnect).setOnClickListener(v -> {
+            hideMenu();
+            game.disconnect();
+        });
+        root.findViewById(R.id.gamePanelQuit).setOnClickListener(v -> {
+            hideMenu();
+            game.quit();
+        });
         dialog.setContentView(root);
 
         // Back (or B on a gamepad) steps up to the parent menu, and closes the top one
@@ -199,7 +308,7 @@ public class GameMenu implements Game.GameMenuCallbacks {
         dialog.show();
     }
 
-    private void showSpecialKeysMenu(GameInputDevice device) {
+    private void showSpecialKeysMenu() {
         List<MenuOption> options = new ArrayList<>();
 
         if(!PreferenceConfiguration.readPreferences(game).disableDefaultExtraKeys){
@@ -285,34 +394,38 @@ public class GameMenu implements Game.GameMenuCallbacks {
             }
         }
         showMenuDialog(getString(R.string.game_menu_send_keys), options.toArray(new MenuOption[options.size()]),
-                () -> showAdvancedMenu(device));
+                () -> showMenu(menuDevice));
     }
 
     private void showAdvancedMenu(GameInputDevice device) {
         List<MenuOption> options = new ArrayList<>();
-        if (game.allowChangeMouseMode) {
-            options.add(new MenuOption(getString(R.string.game_menu_select_mouse_mode), true, () -> game.selectMouseMode(dialogScreenContext)));
-        }
-        
-        options.add(new MenuOption(getString(R.string.game_menu_toggle_hud), true, game::toggleHUD));
-        options.add(new MenuOption(getString(R.string.game_menu_toggle_floating_button), true, game::toggleFloatingButtonVisibility));
-        options.add(new MenuOption(getString(R.string.game_menu_toggle_keyboard_model), true, game::toggleKeyboardController));
-        if (!game.isOnExternalDisplay()) {
-            options.add(new MenuOption(getString(R.string.game_menu_toggle_virtual_model), true, game::toggleVirtualController));
-        }
-        options.add(new MenuOption(getString(R.string.game_menu_toggle_virtual_keyboard_model), true, game::toggleFullKeyboard));
-        options.add(new MenuOption(getString(R.string.game_menu_task_manager), true, () -> sendKeys(new short[]{KeyboardTranslator.VK_LCONTROL, KeyboardTranslator.VK_LSHIFT, KeyboardTranslator.VK_ESCAPE})));
 
-        // **FIXED:** This is a UI navigation action, so it should not use withGameFocus.
-        options.add(new MenuOption(getString(R.string.game_menu_send_keys),
-                () -> showSpecialKeysMenu(device)).submenu());
-
-        options.add(new MenuOption(getString(R.string.game_menu_switch_touch_sensitivity_model), true, game::switchTouchSensitivity));
+        // On-screen controls only make sense with a touchscreen, so a TV doesn't list them
+        if (hasTouchscreen()) {
+            options.add(new MenuOption(getString(R.string.game_menu_toggle_floating_button), true, game::toggleFloatingButtonVisibility));
+            options.add(new MenuOption(getString(R.string.game_menu_toggle_keyboard_model), true, game::toggleKeyboardController));
+            if (!game.isOnExternalDisplay()) {
+                options.add(new MenuOption(getString(R.string.game_menu_toggle_virtual_model), true, game::toggleVirtualController));
+            }
+            options.add(new MenuOption(getString(R.string.game_menu_toggle_virtual_keyboard_model), true, game::toggleFullKeyboard));
+            options.add(new MenuOption(getString(R.string.game_menu_switch_touch_sensitivity_model), true, game::switchTouchSensitivity));
+        }
+        options.add(new MenuOption(getString(R.string.game_menu_send_keys), this::showSpecialKeysMenu).submenu());
         if (device != null) {
             options.addAll(device.getGameMenuOptions());
         }
-        showMenuDialog(getString(R.string.game_menu_advanced), options.toArray(new MenuOption[options.size()]),
+        showMenuDialog(getString(R.string.game_panel_more_options), options.toArray(new MenuOption[options.size()]),
                 () -> showMenu(device));
+    }
+
+    private void showClipboardMenu(GameInputDevice device) {
+        MenuOption[] options = {
+                new MenuOption(getString(R.string.game_menu_upload_clipboard), true,
+                        () -> game.sendClipboard(true)).icon(R.drawable.ic_game_clipboard),
+                new MenuOption(getString(R.string.game_menu_fetch_clipboard), true,
+                        () -> game.getClipboard(0)).icon(R.drawable.ic_game_clipboard),
+        };
+        showMenuDialog(getString(R.string.game_panel_clipboard), options, () -> showMenu(device));
     }
 
     private void showServerCmd(ArrayList<String> serverCmds, GameInputDevice device) {
@@ -329,22 +442,24 @@ public class GameMenu implements Game.GameMenuCallbacks {
     }
 
     public void showMenu(GameInputDevice device) {
+        menuDevice = device;
+        boolean touch = hasTouchscreen();
         List<MenuOption> options = new ArrayList<>();
 
-        options.add(new MenuOption(getString(R.string.game_menu_disconnect), game::disconnect)
-                .icon(R.drawable.ic_game_disconnect));
+        options.add(new MenuOption(getString(R.string.game_panel_stats), game::toggleHUD)
+                .icon(R.drawable.ic_settings_stats).toggle(game::isPerfOverlayEnabled));
 
-        options.add(new MenuOption(getString(R.string.game_menu_quit_session), game::quit)
-                .icon(R.drawable.ic_game_quit));
-
-        options.add(new MenuOption(getString(R.string.game_menu_toggle_keyboard), true,
+        options.add(new MenuOption(getString(R.string.game_panel_keyboard), true,
                 game::toggleKeyboard).icon(R.drawable.ic_settings_keys));
 
-        options.add(new MenuOption(getString(R.string.game_menu_upload_clipboard), true,
-                () -> game.sendClipboard(true)).icon(R.drawable.ic_game_clipboard));
+        if (touch && game.allowChangeMouseMode) {
+            options.add(new MenuOption(getString(R.string.game_panel_mouse_mode), true,
+                    () -> game.selectMouseMode(dialogScreenContext))
+                    .icon(R.drawable.ic_settings_mouse).value(game.getMouseModeLabel()));
+        }
 
-        options.add(new MenuOption(getString(R.string.game_menu_fetch_clipboard), true,
-                () -> game.getClipboard(0)).icon(R.drawable.ic_game_clipboard));
+        options.add(new MenuOption(getString(R.string.game_panel_clipboard), () -> showClipboardMenu(device))
+                .icon(R.drawable.ic_game_clipboard).value(getString(R.string.game_panel_clipboard_value)).submenu());
 
         options.add(new MenuOption(getString(R.string.game_menu_server_cmd),
                 () -> {
@@ -362,18 +477,51 @@ public class GameMenu implements Game.GameMenuCallbacks {
                     }
                 }).icon(R.drawable.ic_game_command).submenu());
 
-        options.add(new MenuOption(getString(game.isZoomModeEnabled() ? R.string.game_menu_disable_zoom_mode : R.string.game_menu_enable_zoom_mode), true,
-                game::toggleZoomMode).icon(R.drawable.ic_game_zoom));
+        // Pan and zoom and rotation are for touchscreens, so a TV doesn't list them
+        if (touch) {
+            options.add(new MenuOption(getString(game.isZoomModeEnabled() ? R.string.game_menu_disable_zoom_mode : R.string.game_menu_enable_zoom_mode), true,
+                    game::toggleZoomMode).icon(R.drawable.ic_game_zoom));
 
-        if (dialogScreenContext == game) {
-            options.add(new MenuOption(getString(R.string.game_menu_rotate_screen), true,
-                    game::rotateScreen).icon(R.drawable.ic_game_rotate));
+            if (dialogScreenContext == game) {
+                options.add(new MenuOption(getString(R.string.game_menu_rotate_screen), true,
+                        game::rotateScreen).icon(R.drawable.ic_game_rotate));
+            }
         }
 
-        options.add(new MenuOption(getString(R.string.game_menu_advanced),
+        options.add(new MenuOption(getString(R.string.game_panel_more_options),
                 () -> showAdvancedMenu(device)).icon(R.drawable.ic_settings_advanced).submenu());
 
-        showMenuDialog(getString(R.string.quick_menu_title), options.toArray(new MenuOption[options.size()]), null);
+        List<KeyChip> chips = new ArrayList<>();
+        if (!PreferenceConfiguration.readPreferences(game).disableDefaultExtraKeys) {
+            chips.add(new KeyChip("Esc", new short[]{KeyboardTranslator.VK_ESCAPE}));
+            chips.add(new KeyChip("Win", new short[]{KeyboardTranslator.VK_LWIN}));
+            chips.add(new KeyChip("Alt+F4", new short[]{KeyboardTranslator.VK_LMENU, KeyboardTranslator.VK_F4}));
+            chips.add(new KeyChip("Alt+Enter", new short[]{KeyboardTranslator.VK_LMENU, KeyboardTranslator.VK_RETURN}));
+            chips.add(new KeyChip("Win+G", new short[]{KeyboardTranslator.VK_LWIN, KeyboardTranslator.VK_G}));
+            chips.add(new KeyChip("Win+D", new short[]{KeyboardTranslator.VK_LWIN, KeyboardTranslator.VK_D}));
+            chips.add(new KeyChip(getString(R.string.game_panel_task_manager), new short[]{KeyboardTranslator.VK_LCONTROL, KeyboardTranslator.VK_LSHIFT, KeyboardTranslator.VK_ESCAPE}));
+        }
+        // No keys: the chip opens the full list, with any custom shortcuts
+        chips.add(new KeyChip(getString(R.string.game_panel_more) + " \u25B8", null));
+
+        String title = game.getAppName() != null ? game.getAppName() : getString(R.string.quick_menu_title);
+        showMenuDialog(title, mainSubtitle(), options.toArray(new MenuOption[options.size()]), null,
+                chips.toArray(new KeyChip[0]));
+    }
+
+    // "GAMING-PC · 42 min · Back closes", leaving out what isn't known
+    private String mainSubtitle() {
+        List<String> parts = new ArrayList<>();
+        String host = game.getPcName();
+        long started = game.getStreamStartedAtMs();
+        if (host != null && started > 0) {
+            long minutes = (SystemClock.elapsedRealtime() - started) / 60000;
+            parts.add(game.getString(R.string.game_panel_subtitle_host_time, host, (int) minutes));
+        } else if (host != null) {
+            parts.add(host);
+        }
+        parts.add(getString(R.string.game_panel_back_closes));
+        return TextUtils.join(" \u00B7 ", parts);
     }
 
     @Override
