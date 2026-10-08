@@ -4,6 +4,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.StringReader;
 import java.net.UnknownHostException;
+import java.security.cert.CertificateEncodingException;
 
 import com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton;
 import com.limelight.binding.PlatformBinding;
@@ -822,8 +823,17 @@ public class PcView extends AppCompatActivity implements AdapterFragmentCallback
                 if (managementUrl == null) {
                     Toast.makeText(PcView.this, getResources().getString(R.string.pcview_error_no_management_url), Toast.LENGTH_LONG).show();
                 } else {
-                    HelpLauncher.launchUrl(PcView.this, managementUrl);
+                    byte[] trustedCert = null;
+                    try {
+                        if (computer.details.serverCert != null) {
+                            trustedCert = computer.details.serverCert.getEncoded();
+                        }
+                    } catch (CertificateEncodingException e) {
+                        LimeLog.exception(e);
+                    }
+                    HelpLauncher.launchUrl(PcView.this, managementUrl, trustedCert);
                 }
+                return true;
 
             default:
                 return super.onContextItemSelected(item);
@@ -1101,7 +1111,13 @@ public class PcView extends AppCompatActivity implements AdapterFragmentCallback
         }
         public String guessManagementUrl() {
             if (details.activeAddress == null) return null;
-            return "https://" + details.activeAddress.address + ":" + (details.guessExternalPort() + 1);
+            // The web UI listens one port above the HTTP port of the address we reach the host on
+            int port = details.activeAddress.port != 0 ? details.activeAddress.port : details.guessExternalPort();
+            String host = details.activeAddress.address;
+            if (host.contains(":")) {
+                host = "[" + host + "]";
+            }
+            return "https://" + host + ":" + (port + 1);
         }
     }
 }

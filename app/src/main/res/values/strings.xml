@@ -15,6 +15,8 @@
     <string name="configuration_mode_exiting">Exiting configuration mode</string>
     <string name="help_loading_title">Help Viewer</string>
     <string name="help_loading_msg">Loading help page…</string>
+    <string name="help_error_certificate">Couldn\'t open the server config page: the host\'s certificate doesn\'t match the one it paired with.</string>
+    <string name="help_error_unreachable">Couldn\'t reach the server config page. Check that the host\'s web UI is running.</string>
 
     <!-- Alignments -->
     <string name="align_left">Align Left</string>

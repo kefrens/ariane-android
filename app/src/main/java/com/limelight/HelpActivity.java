@@ -1,21 +1,34 @@
 package com.limelight;
 
 import android.app.Activity;
+import android.content.Intent;
 import android.graphics.Bitmap;
+import android.net.http.SslCertificate;
+import android.net.http.SslError;
 import android.os.Build;
 import android.os.Bundle;
+import android.webkit.SslErrorHandler;
+import android.webkit.WebResourceError;
+import android.webkit.WebResourceRequest;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.window.OnBackInvokedCallback;
 import android.window.OnBackInvokedDispatcher;
+import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.limelight.utils.SpinnerDialog;
 
+import java.util.Arrays;
+
 public class HelpActivity extends AppCompatActivity {
+    // DER-encoded certificate the page may present instead of a CA-signed one. The host's
+    // server config page uses the same self-signed certificate the host paired with.
+    public static final String EXTRA_TRUSTED_CERT = "trustedCert";
 
     private SpinnerDialog loadingDialog;
+    private byte[] trustedCert;
     private WebView webView;
 
     private boolean backCallbackRegistered;
@@ -37,6 +50,8 @@ public class HelpActivity extends AppCompatActivity {
                 }
             };
         }
+
+        trustedCert = getIntent().getByteArrayExtra(EXTRA_TRUSTED_CERT);
 
         webView = new WebView(this);
         setContentView(webView);
@@ -73,9 +88,54 @@ public class HelpActivity extends AppCompatActivity {
 
                 refreshBackDispatchState();
             }
+
+            @Override
+            public void onReceivedSslError(WebView view, SslErrorHandler handler, SslError error) {
+                if (trustedCert != null && Arrays.equals(trustedCert, encoded(error.getCertificate()))) {
+                    handler.proceed();
+                }
+                else {
+                    handler.cancel();
+                    closeWithError(R.string.help_error_certificate);
+                }
+            }
+
+            @Override
+            public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
+                if (request.isForMainFrame()) {
+                    closeWithError(R.string.help_error_unreachable);
+                }
+            }
         });
 
         webView.loadUrl(getIntent().getData().toString());
+    }
+
+    private static byte[] encoded(SslCertificate certificate) {
+        if (certificate == null) {
+            return null;
+        }
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                return certificate.getX509Certificate().getEncoded();
+            }
+            return SslCertificate.saveState(certificate).getByteArray("x509-certificate");
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    // A page that fails to load leaves an empty, black screen, so say why and go back
+    private void closeWithError(int messageId) {
+        if (isFinishing()) {
+            return;
+        }
+        if (loadingDialog != null) {
+            loadingDialog.dismiss();
+            loadingDialog = null;
+        }
+        Toast.makeText(this, messageId, Toast.LENGTH_LONG).show();
+        finish();
     }
 
     private void refreshBackDispatchState() {

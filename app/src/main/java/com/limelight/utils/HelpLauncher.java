@@ -9,6 +9,12 @@ import com.limelight.HelpActivity;
 
 public class HelpLauncher {
     public static void launchUrl(Context context, String url) {
+        launchUrl(context, url, null);
+    }
+
+    // trustedCert lets the page use that self-signed certificate. Such pages always open in
+    // our WebView, which checks it, instead of a browser that would warn about it.
+    public static void launchUrl(Context context, String url, byte[] trustedCert) {
         if (url.startsWith("@")) {
             try {
                 int resId = Integer.parseInt(url.substring(1));
@@ -26,7 +32,7 @@ public class HelpLauncher {
             // just shows an error dialog if we try to use it. We used to try to be clever and check
             // the package name of the resolved intent, but it's not worth it anymore with Android 11's
             // package visibility changes. We'll just always use the WebView on Android TV.
-            if (!context.getPackageManager().hasSystemFeature(PackageManager.FEATURE_LEANBACK)) {
+            if (trustedCert == null && !context.getPackageManager().hasSystemFeature(PackageManager.FEATURE_LEANBACK)) {
                 context.startActivity(i);
                 return;
             }
@@ -42,6 +48,9 @@ public class HelpLauncher {
         // We'll launch our WebView activity
         Intent i = new Intent(context, HelpActivity.class);
         i.setData(Uri.parse(url));
+        if (trustedCert != null) {
+            i.putExtra(HelpActivity.EXTRA_TRUSTED_CERT, trustedCert);
+        }
         context.startActivity(i);
     }
 
