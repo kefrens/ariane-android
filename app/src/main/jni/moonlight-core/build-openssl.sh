@@ -22,5 +22,12 @@ for pair in android-arm:armeabi-v7a android-arm64:arm64-v8a android-x86:x86 andr
     cp libcrypto.a libssl.a $OUTPUT_DIR/$abi/
 done
 
+# Ship only the public headers. configuration.h comes from the last (64-bit)
+# build, so make its bignum word size follow the ABI being compiled.
 rm -rf $OUTPUT_DIR/include
-cp -R include $OUTPUT_DIR/include
+mkdir -p $OUTPUT_DIR/include/openssl
+cp include/openssl/*.h $OUTPUT_DIR/include/openssl/
+sed -i -e '/^#  undef THIRTY_TWO_BIT$/d' \
+    -e 's/^#  define SIXTY_FOUR_BIT_LONG$/#  if defined(__LP64__)\n#   define SIXTY_FOUR_BIT_LONG\n#  else\n#   define BN_LLONG\n#   define THIRTY_TWO_BIT\n#  endif/' \
+    $OUTPUT_DIR/include/openssl/configuration.h
+grep -q '^#   define THIRTY_TWO_BIT$' $OUTPUT_DIR/include/openssl/configuration.h

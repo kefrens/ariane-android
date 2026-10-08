@@ -199,13 +199,17 @@ extern "C" {
     /* clang-format on */
     /* Only one for the following should be defined */
     /* clang-format off */
-#  define SIXTY_FOUR_BIT_LONG
+#  if defined(__LP64__)
+#   define SIXTY_FOUR_BIT_LONG
+#  else
+#   define BN_LLONG
+#   define THIRTY_TWO_BIT
+#  endif
     /* clang-format on */
     /* clang-format off */
 #  undef SIXTY_FOUR_BIT
     /* clang-format on */
     /* clang-format off */
-#  undef THIRTY_TWO_BIT
 /* clang-format on */
 #endif
 
