@@ -149,25 +149,25 @@ public class VirtualControllerConfigurationLoader {
         return button;
     }
 
-    private static AnalogStick createLeftStick(
+    private static AnalogStick<VirtualController> createLeftStick(
             final VirtualController controller,
             final Context context) {
         return new LeftAnalogStick(controller, context);
     }
 
-    private static AnalogStick createRightStick(
+    private static AnalogStick<VirtualController> createRightStick(
             final VirtualController controller,
             final Context context) {
         return new RightAnalogStick(controller, context);
     }
 
-    private static AnalogStickFree createLeftStick2(
+    private static AnalogStickFree<VirtualController> createLeftStick2(
             final VirtualController controller,
             final Context context) {
         return new LeftAnalogStickFree(controller, context);
     }
 
-    private static AnalogStickFree createRightStick2(
+    private static AnalogStickFree<VirtualController> createRightStick2(
             final VirtualController controller,
             final Context context) {
         return new RightAnalogStickFree(controller, context);
@@ -416,7 +416,7 @@ public class VirtualControllerConfigurationLoader {
                                    final Context context) {
         SharedPreferences.Editor prefEditor = context.getSharedPreferences(OSC_PREFERENCE, Activity.MODE_PRIVATE).edit();
 
-        for (VirtualControllerElement element : controller.getElements()) {
+        for (VirtualControllerElement<VirtualController> element : controller.getElements()) {
             String prefKey = ""+element.elementId;
             try {
                 prefEditor.putString(prefKey, element.getConfiguration().toString());
@@ -431,7 +431,7 @@ public class VirtualControllerConfigurationLoader {
     public static void loadFromPreferences(final VirtualController controller, final Context context) {
         SharedPreferences pref = context.getSharedPreferences(OSC_PREFERENCE, Activity.MODE_PRIVATE);
 
-        for (VirtualControllerElement element : controller.getElements()) {
+        for (VirtualControllerElement<VirtualController> element : controller.getElements()) {
             String prefKey = ""+element.elementId;
 
             String jsonConfig = pref.getString(prefKey, null);

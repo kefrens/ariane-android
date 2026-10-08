@@ -10,16 +10,16 @@ import android.content.DialogInterface;
 import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.util.DisplayMetrics;
+import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.FrameLayout;
 
-import com.limelight.Game;
-
 import org.json.JSONException;
 import org.json.JSONObject;
 
-public abstract class VirtualControllerElement extends View {
+// Base of every on-screen gamepad and keyboard element: drawing, layout editing and saving.
+public abstract class VirtualControllerElement<C extends ElementHost> extends View {
     protected static boolean _PRINT_DEBUG_INFORMATION = false;
 
     public static final int EID_DPAD = 1;
@@ -40,13 +40,13 @@ public abstract class VirtualControllerElement extends View {
     public static final int EID_GDB = 16;
     public static final int EID_TOUCHPAD = 65;
 
-    protected VirtualController virtualController;
-    protected final int elementId;
+    protected final C virtualController;
+    protected final String elementId;
 
     private final Paint paint = new Paint();
 
     protected int normalColor = 0xF0888888;
-    protected int pressedColor = 0xF07272ED;
+    protected int pressedColor;
     private int configMoveColor = 0xF0FF0000;
     private int configResizeColor = 0xF0FF00FF;
     private int configSelectedColor = 0xF000FF00;
@@ -59,6 +59,8 @@ public abstract class VirtualControllerElement extends View {
     float position_pressed_y = 0;
 
     public boolean enabled = true;
+    // Hidden elements stay out of view, even while the layout is being edited
+    public boolean hidden = false;
 
     private enum Mode {
         Normal,
@@ -68,16 +70,51 @@ public abstract class VirtualControllerElement extends View {
 
     private Mode currentMode = Mode.Normal;
 
-    protected VirtualControllerElement(VirtualController controller, Context context, int elementId) {
+    // Last position while moving, to resize the element to fit once it is dropped
+    private int lastMoveX;
+    private int lastMoveY;
+
+    protected VirtualControllerElement(C controller, Context context, int elementId) {
+        this(controller, context, String.valueOf(elementId));
+    }
+
+    protected VirtualControllerElement(C controller, Context context, String elementId) {
         super(context);
 
         this.virtualController = controller;
         this.elementId = elementId;
+        this.pressedColor = controller.getPressedColor();
+    }
+
+    private View[] otherElements() {
+        View[] others = new View[virtualController.getElements().size() - 1];
+        int index = 0;
+        for (VirtualControllerElement<?> element : virtualController.getElements()) {
+            if (element != this) {
+                others[index++] = element;
+            }
+        }
+        return others;
     }
 
     protected void moveElement(int pressed_x, int pressed_y, int x, int y) {
         int newPos_x = (int) getX() + x - pressed_x;
         int newPos_y = (int) getY() + y - pressed_y;
+
+        lastMoveX = newPos_x;
+        lastMoveY = newPos_y;
+
+        if (virtualController.snapsElements() && virtualController.getControllerMode() == ControllerMode.MoveButtons) {
+            LayoutSnappingHelper.SnapResult snapResult = LayoutSnappingHelper.calculateSnappedPosition(
+                    this, otherElements(), newPos_x, newPos_y);
+
+            newPos_x = snapResult.newX;
+            newPos_y = snapResult.newY;
+
+            if (snapResult.didSnap || snapResult.didAdjustSpacing) {
+                virtualController.vibrate(KeyEvent.ACTION_DOWN);
+            }
+        }
 
         FrameLayout.LayoutParams layoutParams = (FrameLayout.LayoutParams) getLayoutParams();
 
@@ -101,8 +138,28 @@ public abstract class VirtualControllerElement extends View {
         requestLayout();
     }
 
-    protected  void actionDisableEnableButton(){
+    // Once dropped, grow or shrink the element to line up with its neighbours
+    private void resizeToFit() {
+        if (!virtualController.snapsElements() || virtualController.getControllerMode() != ControllerMode.MoveButtons) {
+            return;
+        }
+
+        LayoutSnappingHelper.SnapResult snapResult = LayoutSnappingHelper.calculateSnappedPosition(
+                this, otherElements(), lastMoveX, lastMoveY);
+
+        if (snapResult.didResize) {
+            FrameLayout.LayoutParams layoutParams = (FrameLayout.LayoutParams) getLayoutParams();
+            layoutParams.width = snapResult.newWidth;
+            layoutParams.height = snapResult.newHeight;
+            virtualController.vibrate(KeyEvent.ACTION_DOWN);
+            requestLayout();
+        }
+    }
+
+    protected void actionDisableEnableButton() {
         enabled = !enabled;
+        // Disabled elements stay visible, greyed out, until the layout is saved
+        invalidate();
     }
 
     @Override
@@ -168,11 +225,11 @@ public abstract class VirtualControllerElement extends View {
     }
 
     protected int getDefaultColor() {
-        if (virtualController.getControllerMode() == VirtualController.ControllerMode.MoveButtons)
+        if (virtualController.getControllerMode() == ControllerMode.MoveButtons)
             return configMoveColor;
-        else if (virtualController.getControllerMode() == VirtualController.ControllerMode.ResizeButtons)
+        else if (virtualController.getControllerMode() == ControllerMode.ResizeButtons)
             return configResizeColor;
-        else if (virtualController.getControllerMode() == VirtualController.ControllerMode.DisableEnableButtons)
+        else if (virtualController.getControllerMode() == ControllerMode.DisableEnableButtons)
             return enabled ? configSelectedColor: configDisabledColor;
         else return normalColor;
     }
@@ -244,7 +301,7 @@ public abstract class VirtualControllerElement extends View {
             return true;
         }
 
-        if (virtualController.getControllerMode() == VirtualController.ControllerMode.Active) {
+        if (virtualController.getControllerMode() == ControllerMode.Active) {
             return onElementTouchEvent(event);
         }
 
@@ -255,11 +312,11 @@ public abstract class VirtualControllerElement extends View {
                 startSize_x = getWidth();
                 startSize_y = getHeight();
 
-                if (virtualController.getControllerMode() == VirtualController.ControllerMode.MoveButtons)
+                if (virtualController.getControllerMode() == ControllerMode.MoveButtons)
                     actionEnableMove();
-                else if (virtualController.getControllerMode() == VirtualController.ControllerMode.ResizeButtons)
+                else if (virtualController.getControllerMode() == ControllerMode.ResizeButtons)
                     actionEnableResize();
-                else if (virtualController.getControllerMode() == VirtualController.ControllerMode.DisableEnableButtons)
+                else if (virtualController.getControllerMode() == ControllerMode.DisableEnableButtons)
                     actionDisableEnableButton();
                 return true;
             }
@@ -289,6 +346,9 @@ public abstract class VirtualControllerElement extends View {
             }
             case MotionEvent.ACTION_CANCEL:
             case MotionEvent.ACTION_UP: {
+                if (currentMode == Mode.Move) {
+                    resizeToFit();
+                }
                 actionCancel();
                 return true;
             }
@@ -343,6 +403,7 @@ public abstract class VirtualControllerElement extends View {
         configuration.put("WIDTH", layoutParams.width);
         configuration.put("HEIGHT", layoutParams.height);
         configuration.put("ENABLED", enabled);
+        configuration.put("HIDDEN", hidden);
         return configuration;
     }
 
@@ -354,7 +415,14 @@ public abstract class VirtualControllerElement extends View {
         layoutParams.width = configuration.getInt("WIDTH");
         layoutParams.height = configuration.getInt("HEIGHT");
         enabled = configuration.getBoolean("ENABLED");
-        setVisibility(enabled ? VISIBLE: GONE);
+        hidden = configuration.optBoolean("HIDDEN", false);
+
+        // While enabling and disabling, disabled elements stay visible so they can be turned back on
+        if (virtualController.getControllerMode() == ControllerMode.DisableEnableButtons) {
+            setVisibility(hidden ? GONE : VISIBLE);
+        } else {
+            setVisibility(!hidden && enabled ? VISIBLE : GONE);
+        }
         requestLayout();
     }
 }

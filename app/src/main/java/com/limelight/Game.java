@@ -22,6 +22,7 @@ import com.limelight.binding.input.driver.UsbDriverService;
 import com.limelight.binding.input.evdev.EvdevListener;
 import com.limelight.binding.input.touch.TouchContext;
 import com.limelight.binding.input.touch.TrackpadContext;
+import com.limelight.binding.input.virtual_controller.ControllerMode;
 import com.limelight.binding.input.virtual_controller.VirtualController;
 import com.limelight.binding.input.virtual_controller.keyboard.KeyBoardController;
 import com.limelight.binding.input.virtual_controller.keyboard.KeyBoardLayoutController;
@@ -2883,8 +2884,8 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
                     return handleTouchInput(event, trackpadContextMap, false);
                 } else {
                     if (virtualController != null &&
-                            (virtualController.getControllerMode() == VirtualController.ControllerMode.MoveButtons ||
-                                    virtualController.getControllerMode() == VirtualController.ControllerMode.ResizeButtons)) {
+                            (virtualController.getControllerMode() == ControllerMode.MoveButtons ||
+                                    virtualController.getControllerMode() == ControllerMode.ResizeButtons)) {
                         // Ignore presses when the virtual controller is being configured
                         return true;
                     }

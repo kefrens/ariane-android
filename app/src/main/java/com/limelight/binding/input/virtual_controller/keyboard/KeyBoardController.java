@@ -29,6 +29,9 @@ import com.limelight.GameMenu;
 import com.limelight.LimeLog;
 import com.limelight.R;
 import com.limelight.binding.input.ControllerHandler;
+import com.limelight.binding.input.virtual_controller.ControllerMode;
+import com.limelight.binding.input.virtual_controller.ElementHost;
+import com.limelight.binding.input.virtual_controller.VirtualControllerElement;
 import com.limelight.nvstream.NvConnection;
 import com.limelight.preferences.PreferenceConfiguration;
 import com.limelight.utils.KeyConfigHelper;
@@ -47,14 +50,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-public class KeyBoardController {
-
-    public enum ControllerMode {
-        Active,
-        MoveButtons,
-        ResizeButtons,
-        DisableEnableButtons
-    }
+public class KeyBoardController implements ElementHost {
 
     public boolean shown = false;
 
@@ -62,6 +58,9 @@ public class KeyBoardController {
 
     private final NvConnection conn;
     private final Context context;
+
+    // Settings snapshot for key presses and drawing, refreshed whenever the layout is rebuilt
+    private PreferenceConfiguration prefConfig;
     private final Handler handler;
 
     private FrameLayout frame_layout = null;
@@ -75,12 +74,13 @@ public class KeyBoardController {
     private Button buttonAddKeys = null;
 
     private Vibrator vibrator;
-    private List<keyBoardVirtualControllerElement> elements = new ArrayList<>();
+    private List<VirtualControllerElement<KeyBoardController>> elements = new ArrayList<>();
 
     public KeyBoardController(final NvConnection conn, FrameLayout layout, final Context context) {
         this.conn = conn;
         this.frame_layout = layout;
         this.context = context;
+        this.prefConfig = PreferenceConfiguration.readPreferences(context);
         this.handler = new Handler(Looper.getMainLooper());
 
         this.vibrator = (Vibrator) context.getSystemService(Context.VIBRATOR_SERVICE);
@@ -182,7 +182,7 @@ public class KeyBoardController {
 
                 buttonConfigure.invalidate();
 
-                for (keyBoardVirtualControllerElement element : elements) {
+                for (VirtualControllerElement<KeyBoardController> element : elements) {
                     element.invalidate();
                 }
             }
@@ -200,7 +200,7 @@ public class KeyBoardController {
             builder.setMessage(context.getString(R.string.keyboard_clear_all_confirm_message));
             builder.setPositiveButton(context.getString(R.string.yes), (dialog, which) -> {
                 // Instead of removing elements, mark them as hidden
-                for (keyBoardVirtualControllerElement element : elements) {
+                for (VirtualControllerElement<KeyBoardController> element : elements) {
                     element.hidden = true;
                     element.setVisibility(View.GONE);
                 }
@@ -228,7 +228,7 @@ public class KeyBoardController {
     }
 
     public void hide(boolean temporary) {
-        for (keyBoardVirtualControllerElement element : elements) {
+        for (VirtualControllerElement<KeyBoardController> element : elements) {
             element.setVisibility(View.GONE);
         }
 
@@ -249,7 +249,7 @@ public class KeyBoardController {
     }
 
     public void showElements() {
-        for (keyBoardVirtualControllerElement element : elements) {
+        for (VirtualControllerElement<KeyBoardController> element : elements) {
             // In configuration mode, show all non-hidden elements
             if (currentMode == ControllerMode.DisableEnableButtons) {
                 element.setVisibility(element.hidden ? View.GONE : View.VISIBLE);
@@ -260,7 +260,7 @@ public class KeyBoardController {
     }
 
     public void showEnabledElements() {
-        for (keyBoardVirtualControllerElement element : elements) {
+        for (VirtualControllerElement<KeyBoardController> element : elements) {
             // In configuration mode, show all non-hidden elements
             if (currentMode == ControllerMode.DisableEnableButtons) {
                 element.setVisibility(element.hidden ? View.GONE : View.VISIBLE);
@@ -279,7 +279,7 @@ public class KeyBoardController {
     }
 
     public void removeElements() {
-        for (keyBoardVirtualControllerElement element : elements) {
+        for (VirtualControllerElement<KeyBoardController> element : elements) {
             frame_layout.removeView(element);
         }
         elements.clear();
@@ -290,12 +290,12 @@ public class KeyBoardController {
     }
 
     public void setOpacity(int opacity) {
-        for (keyBoardVirtualControllerElement element : elements) {
+        for (VirtualControllerElement<KeyBoardController> element : elements) {
             element.setOpacity(opacity);
         }
     }
 
-    public void addElement(keyBoardVirtualControllerElement element, int x, int y, int width, int height) {
+    public void addElement(VirtualControllerElement<KeyBoardController> element, int x, int y, int width, int height) {
         elements.add(element);
         FrameLayout.LayoutParams layoutParams = new FrameLayout.LayoutParams(width, height);
         layoutParams.setMargins(x, y, 0, 0);
@@ -303,7 +303,8 @@ public class KeyBoardController {
         frame_layout.addView(element, layoutParams);
     }
 
-    public List<keyBoardVirtualControllerElement> getElements() {
+    @Override
+    public List<VirtualControllerElement<KeyBoardController>> getElements() {
         return elements;
     }
 
@@ -315,6 +316,7 @@ public class KeyBoardController {
 
     public void refreshLayout() {
         removeElements();
+        prefConfig = PreferenceConfiguration.readPreferences(context);
 
         DisplayMetrics screen = context.getResources().getDisplayMetrics();
         int buttonSize = (int) (screen.heightPixels * 0.06f);
@@ -359,6 +361,21 @@ public class KeyBoardController {
         KeyBoardControllerConfigurationLoader.loadFromPreferences(this, context);
     }
 
+    PreferenceConfiguration getPreferences() {
+        return prefConfig;
+    }
+
+    @Override
+    public int getPressedColor() {
+        return 0xA3DCDCDE;
+    }
+
+    @Override
+    public boolean snapsElements() {
+        return true;
+    }
+
+    @Override
     public ControllerMode getControllerMode() {
         return currentMode;
     }
@@ -386,8 +403,9 @@ public class KeyBoardController {
         Game.instance.mouseMove(x,y);
     }
 
+    @Override
     public void vibrate(int action) {
-        if (PreferenceConfiguration.readPreferences(context).enableKeyboardVibrate && vibrator.hasVibrator()) {
+        if (prefConfig.enableKeyboardVibrate && vibrator.hasVibrator()) {
             switch (action) {
                 case KeyEvent.ACTION_DOWN:
                     frame_layout.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY);
@@ -524,7 +542,7 @@ public class KeyBoardController {
 
                 Set<String> existingElementIds = new HashSet<>();
                 List<Rect> existingPositions = new ArrayList<>();
-                for (keyBoardVirtualControllerElement element : elements) {
+                for (VirtualControllerElement<KeyBoardController> element : elements) {
                     if (element.getVisibility() != View.GONE) {
                         // Create a set of existing element IDs for quick lookup
                         existingElementIds.add(element.elementId);
@@ -585,7 +603,7 @@ public class KeyBoardController {
                             // Find non-overlapping position
                             Point position = findNonOverlappingPosition(existingPositions, elementSize);
                             
-                            keyBoardVirtualControllerElement newElement = null;
+                            VirtualControllerElement<KeyBoardController> newElement = null;
                             
                             if (type == 4) { // Custom Key
                                 String name = obj.getString("name");
@@ -645,7 +663,7 @@ public class KeyBoardController {
                                 } else {
                                     newElement = KeyBoardControllerConfigurationLoader.createDigitalButton(
                                         elementId, code, type, 1, name, -1, 
-                                        PreferenceConfiguration.readPreferences(context).stickyModifierKey && 
+                                        prefConfig.stickyModifierKey && 
                                         KeyBoardControllerConfigurationLoader.isModifierKey(code), 
                                         this, context);
                                 }

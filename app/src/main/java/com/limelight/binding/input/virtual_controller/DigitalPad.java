@@ -21,7 +21,7 @@ import com.limelight.R;
 import java.util.ArrayList;
 import java.util.List;
 
-public class DigitalPad extends VirtualControllerElement {
+public class DigitalPad extends VirtualControllerElement<VirtualController> {
     public final static int DIGITAL_PAD_DIRECTION_NO_DIRECTION = 0;
     int direction = DIGITAL_PAD_DIRECTION_NO_DIRECTION;
     public final static int DIGITAL_PAD_DIRECTION_LEFT = 1;
@@ -60,9 +60,9 @@ public class DigitalPad extends VirtualControllerElement {
             rect.right = getWidth() - rect.left;
             rect.bottom = getHeight() - rect.top;
 
-            boolean bIsMoving = virtualController.getControllerMode() == VirtualController.ControllerMode.MoveButtons;
-            boolean bIsResizing = virtualController.getControllerMode() == VirtualController.ControllerMode.ResizeButtons;
-            boolean bIsEnable = virtualController.getControllerMode() == VirtualController.ControllerMode.DisableEnableButtons;
+            boolean bIsMoving = virtualController.getControllerMode() == ControllerMode.MoveButtons;
+            boolean bIsResizing = virtualController.getControllerMode() == ControllerMode.ResizeButtons;
+            boolean bIsEnable = virtualController.getControllerMode() == ControllerMode.DisableEnableButtons;
 
             if (bIsMoving || bIsResizing || bIsEnable) {
                 paint.setStyle(Paint.Style.STROKE);

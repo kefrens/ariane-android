@@ -25,7 +25,7 @@ import com.limelight.preferences.PreferenceConfiguration;
 import java.util.ArrayList;
 import java.util.List;
 
-public class VirtualController {
+public class VirtualController implements ElementHost {
     public static class ControllerInputContext {
 //        public short inputMap = 0x0000;
         public int inputMap = 0;
@@ -35,13 +35,6 @@ public class VirtualController {
         public short rightStickY = 0x0000;
         public short leftStickX = 0x0000;
         public short leftStickY = 0x0000;
-    }
-
-    public enum ControllerMode {
-        Active,
-        MoveButtons,
-        ResizeButtons,
-        DisableEnableButtons
     }
 
     private static final boolean _PRINT_DEBUG_INFORMATION = false;
@@ -64,7 +57,7 @@ public class VirtualController {
 
     private Button buttonConfigure = null;
 
-    private List<VirtualControllerElement> elements = new ArrayList<>();
+    private List<VirtualControllerElement<VirtualController>> elements = new ArrayList<>();
 
     private Vibrator vibrator;
 
@@ -118,7 +111,7 @@ public class VirtualController {
 
                 buttonConfigure.invalidate();
 
-                for (VirtualControllerElement element : elements) {
+                for (VirtualControllerElement<VirtualController> element : elements) {
                     element.invalidate();
                 }
             }
@@ -131,7 +124,7 @@ public class VirtualController {
     }
 
     public void hide() {
-        for (VirtualControllerElement element : elements) {
+        for (VirtualControllerElement<VirtualController> element : elements) {
             element.setVisibility(View.GONE);
         }
 
@@ -155,19 +148,19 @@ public class VirtualController {
     }
 
     public void showElements(){
-        for(VirtualControllerElement element : elements){
+        for(VirtualControllerElement<VirtualController> element : elements){
             element.setVisibility(View.VISIBLE);
         }
     }
 
     public void showEnabledElements(){
-        for(VirtualControllerElement element: elements){
+        for(VirtualControllerElement<VirtualController> element: elements){
             element.setVisibility( element.enabled ? View.VISIBLE : View.GONE );
         }
     }
 
     public void removeElements() {
-        for (VirtualControllerElement element : elements) {
+        for (VirtualControllerElement<VirtualController> element : elements) {
             frame_layout.removeView(element);
         }
         elements.clear();
@@ -176,13 +169,13 @@ public class VirtualController {
     }
 
     public void setOpacity(int opacity) {
-        for (VirtualControllerElement element : elements) {
+        for (VirtualControllerElement<VirtualController> element : elements) {
             element.setOpacity(opacity);
         }
     }
 
 
-    public void addElement(VirtualControllerElement element, int x, int y, int width, int height) {
+    public void addElement(VirtualControllerElement<VirtualController> element, int x, int y, int width, int height) {
         elements.add(element);
         FrameLayout.LayoutParams layoutParams = new FrameLayout.LayoutParams(width, height);
         layoutParams.setMargins(x, y, 0, 0);
@@ -190,7 +183,8 @@ public class VirtualController {
         frame_layout.addView(element, layoutParams);
     }
 
-    public List<VirtualControllerElement> getElements() {
+    @Override
+    public List<VirtualControllerElement<VirtualController>> getElements() {
         return elements;
     }
 
@@ -219,6 +213,7 @@ public class VirtualController {
         VirtualControllerConfigurationLoader.loadFromPreferences(this, context);
     }
 
+    @Override
     public ControllerMode getControllerMode() {
         return currentMode;
     }

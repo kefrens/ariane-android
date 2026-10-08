@@ -12,9 +12,7 @@ import android.graphics.RectF;
 import android.graphics.drawable.Drawable;
 import android.view.MotionEvent;
 
-import com.limelight.binding.input.virtual_controller.VirtualController;
 import com.limelight.binding.input.virtual_controller.VirtualControllerElement;
-import com.limelight.preferences.PreferenceConfiguration;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -22,7 +20,7 @@ import java.util.List;
 /**
  * This is a digital button on screen element. It is used to get click and double click user input.
  */
-public class KeyBoardDigitalButton extends keyBoardVirtualControllerElement {
+public class KeyBoardDigitalButton extends VirtualControllerElement<KeyBoardController> {
 
     /**
      * Listener interface to update registered observers.
@@ -112,7 +110,7 @@ public class KeyBoardDigitalButton extends keyBoardVirtualControllerElement {
     }
 
     private void checkMovementForAllButtons(float x, float y) {
-        for (keyBoardVirtualControllerElement element : virtualController.getElements()) {
+        for (VirtualControllerElement<KeyBoardController> element : virtualController.getElements()) {
             if (element != this && element instanceof KeyBoardDigitalButton) {
                 ((KeyBoardDigitalButton) element).checkMovement(x, y, this);
             }
@@ -165,7 +163,7 @@ public class KeyBoardDigitalButton extends keyBoardVirtualControllerElement {
         rect.right = getWidth() - rect.left;
         rect.bottom = getHeight() - rect.top;
 
-        if(PreferenceConfiguration.readPreferences(getContext()).enableKeyboardSquare){
+        if(virtualController.getPreferences().enableKeyboardSquare){
             canvas.drawRect(rect,paint);
         }else{
             canvas.drawOval(rect, paint);

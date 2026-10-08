@@ -4,6 +4,7 @@
 
 package com.limelight.binding.input.virtual_controller.keyboard;
 
+import com.limelight.binding.input.virtual_controller.VirtualControllerElement;
 import static com.limelight.binding.input.KeyboardTranslator.getModifier;
 
 import android.app.Activity;
@@ -555,7 +556,7 @@ public class KeyBoardControllerConfigurationLoader {
 
         SharedPreferences.Editor prefEditor = context.getSharedPreferences(name, Activity.MODE_PRIVATE).edit();
 
-        for (keyBoardVirtualControllerElement element : controller.getElements()) {
+        for (VirtualControllerElement<KeyBoardController> element : controller.getElements()) {
             String prefKey = "" + element.elementId;
             try {
                 prefEditor.putString(prefKey, element.getConfiguration().toString());
@@ -571,7 +572,7 @@ public class KeyBoardControllerConfigurationLoader {
 
         SharedPreferences pref = context.getSharedPreferences(name, Activity.MODE_PRIVATE);
 
-        for (keyBoardVirtualControllerElement element : controller.getElements()) {
+        for (VirtualControllerElement<KeyBoardController> element : controller.getElements()) {
             String prefKey = "" + element.elementId;
 
             String jsonConfig = pref.getString(prefKey, null);
