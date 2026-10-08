@@ -52,6 +52,8 @@
         android:banner="@drawable/atv_banner"
         android:icon="@mipmap/ic_launcher"
         android:installLocation="auto"
+        android:isGame="true"
+        android:appCategory="game"
         android:gwpAsanMode="always"
         android:localeConfig="@xml/locales_config"
         android:enableOnBackInvokedCallback="false"

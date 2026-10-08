@@ -332,7 +332,7 @@
     <string name="summary_game_mode">Ask the TV to switch to its low-latency game mode while streaming. Needs Android 11 or later and a TV with ALLM or game content type over HDMI.</string>
     <string name="perf_game_mode">TV game mode: %1$s</string>
     <string name="perf_game_mode_requested">requested (display supports it)</string>
-    <string name="perf_game_mode_unsupported">not supported by this display/HDMI link</string>
+    <string name="perf_game_mode_unsupported">not reported by Android (the device may still switch on its own)</string>
     <string name="perf_game_mode_off">off in settings</string>
     <string name="perf_game_mode_old_android">needs Android 11</string>
     <string name="summary_enable_hdr">Stream HDR when the game and PC GPU support it. HDR requires a GPU with HEVC Main 10 encoding support.</string>
