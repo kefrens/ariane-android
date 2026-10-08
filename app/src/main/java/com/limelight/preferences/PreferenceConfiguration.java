@@ -276,6 +276,7 @@ public class PreferenceConfiguration {
     public boolean enablePerfLogging;
     //简化版性能信息
     public boolean enablePerfOverlayLite;
+    public boolean gameMode;
 
     public boolean enablePerfOverlayLiteDialog;
 
@@ -877,6 +878,7 @@ private static int getFramePacingValue(Context context) {
         config.enableNewAnalogStick=prefs.getBoolean(CHECKBOX_CHECKBOX_ENABLE_ANALOG_STICK_NEW,false);
 
         config.enableFullExDisplay=prefs.getBoolean("checkbox_enable_fullexdisplay",false);
+        config.gameMode = prefs.getBoolean("checkbox_game_mode", true);
 
         config.alignDisplayTopCenter =prefs.getBoolean("checkbox_enable_view_top_center",false);
 

@@ -300,6 +300,13 @@
     <string name="title_video_format">Modifier les paramètres de codec</string>
     <string name="summary_video_format">Les nouveaux codecs peuvent réduire la bande passante vidéo requise si votre appareil les prend en charge. Les codecs sélectionnés peuvent être ignorés si ils ne sont pas pris en charge par le logiciel hôte ou le GPU.</string>
     <string name="title_enable_hdr">Activer le HDR (expérimental)</string>
+    <string name="title_game_mode">Mode jeu du téléviseur (ALLM)</string>
+    <string name="summary_game_mode">Demande au téléviseur de passer en mode jeu à faible latence pendant le streaming. Nécessite Android 11 ou plus et un téléviseur compatible ALLM ou « type de contenu jeu » en HDMI.</string>
+    <string name="perf_game_mode">Mode jeu TV : %1$s</string>
+    <string name="perf_game_mode_requested">demandé (pris en charge par l\'écran)</string>
+    <string name="perf_game_mode_unsupported">non pris en charge par l\'écran ou le lien HDMI</string>
+    <string name="perf_game_mode_off">désactivé dans les paramètres</string>
+    <string name="perf_game_mode_old_android">nécessite Android 11</string>
     <string name="summary_enable_hdr">Streamer en HDR lorsque le jeu et le GPU du PC le prennent en charge. Le HDR nécessite un GPU pouvant encoder en HEVC Main 10.</string>
     <string name="title_full_range">Forcer la vidéo sur toute la gamme de couleurs (expérimental)</string>
     <string name="summary_full_range">Cela causera une perte de détails dans les zones claires et sombres si votre appareil n\'affiche pas correctement la vidéo avec une gamme de couleurs complète.</string>
