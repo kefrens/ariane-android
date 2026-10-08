@@ -11,6 +11,7 @@ import static com.limelight.utils.ServerHelper.getSecondaryDisplay;
 import com.limelight.binding.PlatformBinding;
 import com.limelight.binding.audio.AndroidAudioRenderer;
 import com.limelight.binding.input.ControllerHandler;
+import com.limelight.binding.input.TouchEventMath;
 import com.limelight.binding.input.GameInputDevice;
 import com.limelight.binding.input.KeyboardTranslator;
 import com.limelight.binding.input.capture.InputCaptureManager;
@@ -58,8 +59,6 @@ import android.annotation.TargetApi;
 import android.app.AlertDialog;
 import android.app.PictureInPictureParams;
 import android.app.Service;
-import android.content.ClipData;
-import android.content.ClipDescription;
 import android.content.ClipboardManager;
 import android.content.ComponentName;
 import android.content.Context;
@@ -82,7 +81,6 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.IBinder;
-import android.os.PersistableBundle;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
 import android.util.Rational;
@@ -107,7 +105,6 @@ import android.view.inputmethod.InputMethodManager;
 import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.ImageButton;
-import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.NotificationManagerCompat;
 import androidx.preference.PreferenceManager;
@@ -270,7 +267,6 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
     public static final String EXTRA_SERVER_COMMANDS = "ServerCommands";
     public static final String EXTRA_DISPLAY_ID = "DisplayID";
 
-    public static final String CLIPBOARD_IDENTIFIER = "ArtemisStreaming";
 
     private String appUUID;
     private String host;
@@ -283,8 +279,7 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
     private ArrayList<String> serverCommands;
 
     private ViewParent rootView;
-    private ClipboardManager clipboardManager;
-    private boolean clipboardSyncRunning = false;
+    private ClipboardSync clipboardSync;
 
     private NvHTTP httpConn;
 
@@ -404,7 +399,8 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
         // Inflate the content
         setContentView(R.layout.activity_game);
 
-        clipboardManager = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+        clipboardSync = new ClipboardSync(this,
+                (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE), prefConfig);
 
         // Start the spinner
         spinner = SpinnerDialog.displayDialog(this, getResources().getString(R.string.conn_establishing_title),
@@ -744,62 +740,15 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
             Toast.makeText(this, "No AV1 decoder found", Toast.LENGTH_LONG).show();
         }
 
-        // H.264 is always supported
-        int supportedVideoFormats = MoonBridge.VIDEO_FORMAT_H264;
-        if (decoderRenderer.isHevcSupported()) {
-            supportedVideoFormats |= MoonBridge.VIDEO_FORMAT_H265;
-            if (willStreamHdr && decoderRenderer.isHevcMain10Hdr10Supported()) {
-                supportedVideoFormats |= MoonBridge.VIDEO_FORMAT_H265_MAIN10;
-            }
-        }
-        if (decoderRenderer.isAv1Supported()) {
-            supportedVideoFormats |= MoonBridge.VIDEO_FORMAT_AV1_MAIN8;
-            if (willStreamHdr && decoderRenderer.isAv1Main10Supported()) {
-                supportedVideoFormats |= MoonBridge.VIDEO_FORMAT_AV1_MAIN10;
-            }
-        }
-
-        int gamepadMask = ControllerHandler.getAttachedControllerMask(this);
-        if (!prefConfig.multiController) {
-            // Always set gamepad 1 present for when multi-controller is
-            // disabled for games that don't properly support detection
-            // of gamepads removed and replugged at runtime.
-            gamepadMask = 1;
-        }
-        if (prefConfig.onscreenController) {
-            // If we're using OSC, always set at least gamepad 1.
-            gamepadMask |= 1;
-        }
+        int supportedVideoFormats = StreamSetup.supportedVideoFormats(decoderRenderer, willStreamHdr);
+        int gamepadMask = StreamSetup.gamepadMask(ControllerHandler.getAttachedControllerMask(this),
+                prefConfig.multiController, prefConfig.onscreenController);
 
         // Set to the optimal mode for streaming
         float displayRefreshRate = prepareDisplayForRendering(currentDisplay);
         LimeLog.info("Display refresh rate: "+displayRefreshRate);
 
-        // If the user requested frame pacing using a capped FPS, we will need to change our
-        // desired FPS setting here in accordance with the active display refresh rate.
-        int roundedRefreshRate = Math.round(displayRefreshRate);
-        float chosenFrameRate = prefConfig.fps;
-        if (prefConfig.framePacing == PreferenceConfiguration.FRAME_PACING_CAP_FPS) {
-            if (prefConfig.fps >= roundedRefreshRate) {
-                if (prefConfig.fps > roundedRefreshRate + 3) {
-                    // Use frame drops when rendering above the screen frame rate
-                    prefConfig.framePacing = PreferenceConfiguration.FRAME_PACING_BALANCED;
-                    LimeLog.info("Using drop mode for FPS > Hz");
-                } else if (roundedRefreshRate <= 49) {
-                    // Let's avoid clearly bogus refresh rates and fall back to legacy rendering
-                    prefConfig.framePacing = PreferenceConfiguration.FRAME_PACING_BALANCED;
-                    LimeLog.info("Bogus refresh rate: " + roundedRefreshRate);
-                }
-                else {
-                    chosenFrameRate = roundedRefreshRate - 1;
-                    LimeLog.info("Adjusting FPS target for screen to " + chosenFrameRate);
-                }
-            }
-        }
-
-        if (prefConfig.framePacingWarpFactor > 0) {
-            chosenFrameRate *= prefConfig.framePacingWarpFactor;
-        }
+        float chosenFrameRate = StreamSetup.chooseFrameRate(prefConfig, displayRefreshRate);
 
         StreamConfiguration config = new StreamConfiguration.Builder()
                 .setResolution(
@@ -2283,98 +2232,12 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
         return false;
     }
 
-    // Method to get clipboard content
-    private String getClipboardContent(boolean force) {
-        // Check if there is any clipboard data
-        if (clipboardManager.hasPrimaryClip()) {
-            ClipDescription clipDescription = clipboardManager.getPrimaryClipDescription();
-            if (!force && clipDescription != null) {
-                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
-                    PersistableBundle extras = clipDescription.getExtras();
-                    if (extras != null && extras.getBoolean(CLIPBOARD_IDENTIFIER)) {
-                        // We're getting the clipboard data we just set/read a while ago
-                        return null;
-                    }
-                } else {
-                    CharSequence clipLabel = clipDescription.getLabel();
-                    if (clipLabel != null && clipLabel.equals(CLIPBOARD_IDENTIFIER)) {
-                        // We're getting the clipboard data we set a while ago
-                        return null;
-                    }
-                }
-            }
-
-            ClipData clipData = clipboardManager.getPrimaryClip();
-
-            if (clipData != null && clipData.getItemCount() > 0) {
-                // Get the first item from the clipboard data
-                ClipData.Item item = clipData.getItemAt(0);
-
-                // Mark the clip as visited
-                if (clipDescription != null) {
-                    ClipData clonedClip = cloneClipData(clipDescription, item);
-                    clipboardManager.setPrimaryClip(clonedClip);
-                }
-
-                // Get the text data from the clipboard item
-                CharSequence clipText = item.getText();
-                if (clipText == null) {
-                    return  null;
-                }
-                return clipText.toString();
-            }
-        }
-
-        return null;
-    }
-
-    private static @NonNull ClipData cloneClipData(ClipDescription clipDescription, ClipData.Item item) {
-        ClipDescription clonedDescription = new ClipDescription(clipDescription);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            PersistableBundle extras = clipDescription.getExtras();
-            if (extras == null) {
-                extras = new PersistableBundle();
-            }
-            extras.putBoolean(CLIPBOARD_IDENTIFIER, true);
-            clonedDescription.setExtras(extras);
-        }
-
-        return new ClipData(clonedDescription, item);
-    }
-
     public boolean sendClipboard(boolean force) {
         if (httpConn == null) {
             LimeLog.warning("httpConn not ready, cannot send clipboard!");
             return false;
         }
-
-        String clipboardText = getClipboardContent(force);
-        if (clipboardText != null) {
-            new Thread() {
-                public void run() {
-                    try {
-                        if (!httpConn.sendClipboard(clipboardText)) {
-                            if (prefConfig.smartClipboardSyncToast) {
-                                Game.this.runOnUiThread(() -> Toast.makeText(Game.this, getString(R.string.clipboard_sync_unsupported), Toast.LENGTH_SHORT).show());
-                            }
-                        } else {
-                            if (prefConfig.smartClipboardSyncToast) {
-                                Game.this.runOnUiThread(() -> Toast.makeText(Game.this, getString(R.string.send_clipboard_success), Toast.LENGTH_SHORT).show());
-                            }
-                        }
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                        if (prefConfig.smartClipboardSyncToast) {
-                            Game.this.runOnUiThread(() -> Toast.makeText(Game.this, getString(R.string.send_clipboard_failed) + e.getMessage(), Toast.LENGTH_SHORT).show());
-                        }
-                    }
-                }
-            }.start();
-
-            return true;
-        }
-
-        return false;
+        return clipboardSync.send(httpConn, force);
     }
 
     public boolean getClipboard(int delay) {
@@ -2387,45 +2250,7 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
             return false;
         }
 
-        new Thread() {
-            public void run() {
-                if (clipboardSyncRunning) {
-                    return;
-                }
-
-                clipboardSyncRunning = true;
-                try {
-                    if (delay > 0) {
-                        sleep(delay);
-                    }
-                    String clipboardContent = httpConn.getClipboard();
-                    ClipData clipData = ClipData.newPlainText(CLIPBOARD_IDENTIFIER, clipboardContent);
-
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                        ClipDescription clipDescription = clipData.getDescription();
-                        PersistableBundle newExtras = new PersistableBundle();
-                        newExtras.putBoolean(CLIPBOARD_IDENTIFIER, true);
-                        if (prefConfig.hideClipboardContent) {
-                            // We don't know if the message is sensitive or not, to be safe mark them all as sensitive.
-                            newExtras.putBoolean("android.content.extra.IS_SENSITIVE", true);
-                        }
-                        clipDescription.setExtras(newExtras);
-                    }
-
-                    clipboardManager.setPrimaryClip(clipData);
-                    if (prefConfig.smartClipboardSyncToast) {
-                        Game.this.runOnUiThread(() -> Toast.makeText(Game.this, getString(R.string.get_clipboard_success), Toast.LENGTH_SHORT).show());
-                    }
-                } catch (Exception e) {
-                    e.printStackTrace();
-                    if (prefConfig.smartClipboardSyncToast) {
-                        Game.this.runOnUiThread(() -> Toast.makeText(Game.this, getString(R.string.get_clipboard_failed) + e.getMessage(), Toast.LENGTH_SHORT).show());
-                    }
-                }
-                clipboardSyncRunning = false;
-            }
-        }.start();
-
+        clipboardSync.fetch(httpConn, delay);
         return true;
     }
 
@@ -2580,53 +2405,6 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
         return new float[] { normalizedX, normalizedY };
     }
 
-    private static float normalizeValueInRange(float value, InputDevice.MotionRange range) {
-        return (value - range.getMin()) / range.getRange();
-    }
-
-    private static float getPressureOrDistance(MotionEvent event, int pointerIndex) {
-        InputDevice dev = event.getDevice();
-        switch (event.getActionMasked()) {
-            case MotionEvent.ACTION_HOVER_ENTER:
-            case MotionEvent.ACTION_HOVER_MOVE:
-            case MotionEvent.ACTION_HOVER_EXIT:
-                // Hover events report distance
-                if (dev != null) {
-                    InputDevice.MotionRange distanceRange = dev.getMotionRange(MotionEvent.AXIS_DISTANCE, event.getSource());
-                    if (distanceRange != null) {
-                        return normalizeValueInRange(event.getAxisValue(MotionEvent.AXIS_DISTANCE, pointerIndex), distanceRange);
-                    }
-                }
-                return 0.0f;
-
-            default:
-                // Other events report pressure
-                return event.getPressure(pointerIndex);
-        }
-    }
-
-    private static short getRotationDegrees(MotionEvent event, int pointerIndex) {
-        InputDevice dev = event.getDevice();
-        if (dev != null) {
-            if (dev.getMotionRange(MotionEvent.AXIS_ORIENTATION, event.getSource()) != null) {
-                short rotationDegrees = (short) Math.toDegrees(event.getOrientation(pointerIndex));
-                if (rotationDegrees < 0) {
-                    rotationDegrees += 360;
-                }
-                return rotationDegrees;
-            }
-        }
-        return MoonBridge.LI_ROT_UNKNOWN;
-    }
-
-    private static float[] polarToCartesian(float r, float theta) {
-        return new float[] { (float)(r * Math.cos(theta)), (float)(r * Math.sin(theta)) };
-    }
-
-    private static float cartesianToR(float[] point) {
-        return (float)Math.sqrt(Math.pow(point[0], 2) + Math.pow(point[1], 2));
-    }
-
     private float[] getStreamViewNormalizedContactArea(MotionEvent event, int pointerIndex) {
         float orientation;
 
@@ -2658,11 +2436,11 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
 
         // The contact area major axis is parallel to the orientation, so we simply convert
         // polar to cartesian coordinates using the orientation as theta.
-        float[] contactAreaMajorCartesian = polarToCartesian(contactAreaMajor, orientation);
+        float[] contactAreaMajorCartesian = TouchEventMath.polarToCartesian(contactAreaMajor, orientation);
 
         // The contact area minor axis is perpendicular to the contact area major axis (and thus
         // the orientation), so rotate the orientation angle by 90 degrees.
-        float[] contactAreaMinorCartesian = polarToCartesian(contactAreaMinor, (float)(orientation + (Math.PI / 2)));
+        float[] contactAreaMinorCartesian = TouchEventMath.polarToCartesian(contactAreaMinor, (float)(orientation + (Math.PI / 2)));
 
         // Normalize the contact area to the stream view size
         contactAreaMajorCartesian[0] = Math.min(Math.abs(contactAreaMajorCartesian[0]), streamContainer.getWidth()) / streamContainer.getWidth();
@@ -2671,7 +2449,7 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
         contactAreaMinorCartesian[1] = Math.min(Math.abs(contactAreaMinorCartesian[1]), streamContainer.getHeight()) / streamContainer.getHeight();
 
         // Convert the normalized values back into polar coordinates
-        return new float[] { cartesianToR(contactAreaMajorCartesian), cartesianToR(contactAreaMinorCartesian) };
+        return new float[] { TouchEventMath.cartesianToR(contactAreaMajorCartesian), TouchEventMath.cartesianToR(contactAreaMinorCartesian) };
     }
 
     private boolean sendPenEventForPointer(View view, MotionEvent event, byte eventType, byte toolType, int pointerIndex) {
@@ -2695,20 +2473,9 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
         float[] normalizedContactArea = getStreamViewNormalizedContactArea(event, pointerIndex);
         return conn.sendPenEvent(eventType, toolType, penButtons,
                 normalizedCoords[0], normalizedCoords[1],
-                getPressureOrDistance(event, pointerIndex),
+                TouchEventMath.getPressureOrDistance(event, pointerIndex),
                 normalizedContactArea[0], normalizedContactArea[1],
-                getRotationDegrees(event, pointerIndex), tiltDegrees) != MoonBridge.LI_ERR_UNSUPPORTED;
-    }
-
-    private static byte convertToolTypeToStylusToolType(MotionEvent event, int pointerIndex) {
-        switch (event.getToolType(pointerIndex)) {
-            case MotionEvent.TOOL_TYPE_ERASER:
-                return MoonBridge.LI_TOOL_TYPE_ERASER;
-            case MotionEvent.TOOL_TYPE_STYLUS:
-                return MoonBridge.LI_TOOL_TYPE_PEN;
-            default:
-                return MoonBridge.LI_TOOL_TYPE_UNKNOWN;
-        }
+                TouchEventMath.getRotationDegrees(event, pointerIndex), tiltDegrees) != MoonBridge.LI_ERR_UNSUPPORTED;
     }
 
     private boolean trySendPenEvent(View view, MotionEvent event) {
@@ -2721,7 +2488,7 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
             // Move events may impact all active pointers
             boolean handledStylusEvent = false;
             for (int i = 0; i < event.getPointerCount(); i++) {
-                byte toolType = convertToolTypeToStylusToolType(event, i);
+                byte toolType = TouchEventMath.convertToolTypeToStylusToolType(event, i);
                 if (toolType == MoonBridge.LI_TOOL_TYPE_UNKNOWN) {
                     // Not a stylus pointer, so skip it
                     continue;
@@ -2746,7 +2513,7 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
         }
         else {
             // Up, Down, and Hover events are specific to the action index
-            byte toolType = convertToolTypeToStylusToolType(event, event.getActionIndex());
+            byte toolType = TouchEventMath.convertToolTypeToStylusToolType(event, event.getActionIndex());
             if (toolType == MoonBridge.LI_TOOL_TYPE_UNKNOWN) {
                 // Not a stylus event
                 return false;
@@ -2760,9 +2527,9 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
         float[] normalizedContactArea = getStreamViewNormalizedContactArea(event, pointerIndex);
         return conn.sendTouchEvent(eventType, event.getPointerId(pointerIndex),
                 normalizedCoords[0], normalizedCoords[1],
-                getPressureOrDistance(event, pointerIndex),
+                TouchEventMath.getPressureOrDistance(event, pointerIndex),
                 normalizedContactArea[0], normalizedContactArea[1],
-                getRotationDegrees(event, pointerIndex)) != MoonBridge.LI_ERR_UNSUPPORTED;
+                TouchEventMath.getRotationDegrees(event, pointerIndex)) != MoonBridge.LI_ERR_UNSUPPORTED;
     }
 
     private boolean trySendTouchEvent(View view, MotionEvent event) {
@@ -3515,7 +3282,7 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
         // This does network I/O, so don't do it on the main thread.
         final int portTestResult = MoonBridge.testClientConnectivity(ServerHelper.CONNECTION_TEST_SERVER, 443, portFlags);
 
-        if (errorCode == 0 && portFlags != 0 && (portTestResult == MoonBridge.ML_TEST_RESULT_INCONCLUSIVE || portTestResult == 0)) {
+        if (ConnectionErrors.mayStillBeStarting(errorCode, portFlags, portTestResult)) {
             spinner.setMessage(getResources().getString(R.string.unlocking_or_starting));
             return true;
         }
@@ -3538,30 +3305,8 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
                         Toast.makeText(Game.this, getResources().getText(R.string.video_decoder_init_failed), Toast.LENGTH_LONG).show();
                     }
 
-                    String dialogText = getResources().getString(R.string.conn_error_msg) + " " + stage +" (error "+errorCode+")";
-
-                    switch (errorCode) {
-                        case 403: {
-                            dialogText += "\n\n" + getResources().getString(R.string.error_msg_permission_denied) + " (" + getResources().getString(R.string.permission_launch_app) + ")";
-                            break;
-                        }
-                        case -408: {
-                            dialogText += "\n\n" + getResources().getString(R.string.error_msg_timeout);
-                            break;
-                        }
-                        default: {
-                            // do nothing
-                        }
-                    }
-
-                    if (portFlags != 0) {
-                        dialogText += "\n\n" + getResources().getString(R.string.check_ports_msg) + "\n" +
-                                MoonBridge.stringifyPortFlags(portFlags, "\n");
-                    }
-
-                    if (portTestResult != MoonBridge.ML_TEST_RESULT_INCONCLUSIVE && portTestResult != 0)  {
-                        dialogText += "\n\n" + getResources().getString(R.string.nettest_text_blocked);
-                    }
+                    String dialogText = ConnectionErrors.stageFailedMessage(getResources(),
+                            stage, errorCode, portFlags, portTestResult);
 
                     Dialog.displayDialog(Game.this, getResources().getString(R.string.conn_error_title), dialogText, true);
                     finishSecondScreen();
@@ -3614,50 +3359,8 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
                     // Display the error dialog if it was an unexpected termination.
                     // Otherwise, just finish the activity immediately.
                     if (errorCode != MoonBridge.ML_ERROR_GRACEFUL_TERMINATION) {
-                        String message;
-
-                        if (portTestResult != MoonBridge.ML_TEST_RESULT_INCONCLUSIVE && portTestResult != 0) {
-                            // If we got a blocked result, that supersedes any other error message
-                            message = getResources().getString(R.string.nettest_text_blocked);
-                        }
-                        else {
-                            switch (errorCode) {
-                                case MoonBridge.ML_ERROR_NO_VIDEO_TRAFFIC:
-                                    message = getResources().getString(R.string.no_video_received_error);
-                                    break;
-
-                                case MoonBridge.ML_ERROR_NO_VIDEO_FRAME:
-                                    message = getResources().getString(R.string.no_frame_received_error);
-                                    break;
-
-                                case MoonBridge.ML_ERROR_UNEXPECTED_EARLY_TERMINATION:
-                                case MoonBridge.ML_ERROR_PROTECTED_CONTENT:
-                                    message = getResources().getString(R.string.early_termination_error);
-                                    break;
-
-                                case MoonBridge.ML_ERROR_FRAME_CONVERSION:
-                                    message = getResources().getString(R.string.frame_conversion_error);
-                                    break;
-
-                                default:
-                                    String errorCodeString;
-                                    // We'll assume large errors are hex values
-                                    if (Math.abs(errorCode) > 1000) {
-                                        errorCodeString = Integer.toHexString(errorCode);
-                                    }
-                                    else {
-                                        errorCodeString = Integer.toString(errorCode);
-                                    }
-                                    message = getResources().getString(R.string.conn_terminated_msg) + "\n\n" +
-                                            getResources().getString(R.string.error_code_prefix) + " " + errorCodeString;
-                                    break;
-                            }
-                        }
-
-                        if (portFlags != 0) {
-                            message += "\n\n" + getResources().getString(R.string.check_ports_msg) + "\n" +
-                                    MoonBridge.stringifyPortFlags(portFlags, "\n");
-                        }
+                        String message = ConnectionErrors.terminatedMessage(getResources(),
+                                errorCode, portFlags, portTestResult);
 
                         Dialog.displayDialog(Game.this, getResources().getString(R.string.conn_terminated_title),
                                 message, true);
