@@ -11,8 +11,9 @@ android {
         minSdk 21
         targetSdk 34
 
-        versionName "20.2.6"
-        versionCode = 57
+        // Release builds pass the tag's version, e.g. -ParianeVersionName=1.0.0
+        versionName project.findProperty('arianeVersionName') ?: "20.2.6"
+        versionCode = (project.findProperty('arianeVersionCode') ?: "57") as int
 
         // Generate native debug symbols to allow Google Play to symbolicate our native crashes
         ndk.debugSymbolLevel = 'FULL'
@@ -54,7 +55,7 @@ android {
 
             resValue "string",
                     "obtainium_app_url",
-                    "https://apps.obtainium.imranr.dev/redirect?r=obtainium://app/%7B%22id%22%3A%22com.limelight.noir%22%2C%22url%22%3A%22https%3A%2F%2Fgithub.com%2FClassicOldSong%2Fmoonlight-android%22%2C%22author%22%3A%22ClassicOldSong%22%2C%22name%22%3A%22Artemis%22%2C%22additionalSettings%22%3A%22%7B%5C%22apkFilterRegEx%5C%22%3A%5C%22nonRoot%5C%22%2C%5C%22matchGroutToUse%5C%22%3A%5C%22%241%5C%22%2C%5C%22versionExtractionRegEx%5C%22%3A%5C%22v(.%2B)%5C%22%7D%22%7D"
+                    "https://apps.obtainium.imranr.dev/redirect?r=obtainium://app/%7B%22id%22%3A%22com.limelight.ariane%22%2C%22url%22%3A%22https%3A%2F%2Fgithub.com%2Fkefrens%2Fariane-android%22%2C%22author%22%3A%22kefrens%22%2C%22name%22%3A%22Ariane%22%2C%22additionalSettings%22%3A%22%7B%5C%22apkFilterRegEx%5C%22%3A%5C%22nonRoot%5C%22%2C%5C%22versionExtractionRegEx%5C%22%3A%5C%22v%28.%2B%29%5C%22%7D%22%7D"
 
             applicationId "com.limelight"
             dimension "root"
@@ -113,6 +114,17 @@ android {
             keyAlias 'ac3test'
             keyPassword 'ac3test'
         }
+
+        // Release key, kept out of the repo. The release workflow restores it from the
+        // repository secrets; without them, release builds come out unsigned.
+        if (System.getenv('ARIANE_KEYSTORE')) {
+            release {
+                storeFile file(System.getenv('ARIANE_KEYSTORE'))
+                storePassword System.getenv('ARIANE_KEYSTORE_PASSWORD')
+                keyAlias System.getenv('ARIANE_KEY_ALIAS')
+                keyPassword System.getenv('ARIANE_KEY_PASSWORD')
+            }
+        }
     }
 
     buildTypes {
@@ -157,7 +169,11 @@ android {
             // is to please change the applicationId before you publish.
             //
             // TL;DR: Leave the following line alone!
-            applicationIdSuffix ".noir"
+            // Ariane has its own ID, so it installs next to Artemis instead of clashing with it.
+            applicationIdSuffix ".ariane"
+            if (System.getenv('ARIANE_KEYSTORE')) {
+                signingConfig signingConfigs.release
+            }
             resValue "string", "app_label", "Ariane"
             resValue "string", "app_label_root", "Ariane (Root)"
             resValue "string", "app_label_game", "Ariane (Game)"

@@ -31,6 +31,8 @@ app/src/main/jni/ptenc/build-ffmpeg.sh   # optional, for surround passthrough
 
 You need Android Studio and the Android NDK.
 
+To publish a release, push a tag like `v1.0.0`. The Release workflow builds signed APKs and attaches them to a GitHub release. It needs four repository secrets: `ARIANE_KEYSTORE_BASE64`, `ARIANE_KEYSTORE_PASSWORD`, `ARIANE_KEY_ALIAS` and `ARIANE_KEY_PASSWORD`.
+
 ## Credits
 
 Ariane is a fork of a fork:
