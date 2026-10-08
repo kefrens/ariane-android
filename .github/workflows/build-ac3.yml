@@ -3,7 +3,7 @@ name: Build APK (with surround passthrough)
 on:
   workflow_dispatch:
   push:
-    branches: [ "ac3-passthrough", "moonlight-noir" ]
+    branches: [ "ac3-passthrough", "ariane-main" ]
 
 jobs:
   build:
