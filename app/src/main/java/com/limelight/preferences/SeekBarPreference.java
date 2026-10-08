@@ -1,28 +1,37 @@
 package com.limelight.preferences;
 
+import android.app.Dialog;
 import android.content.Context;
 import android.util.AttributeSet;
 import android.view.Gravity;
-import android.widget.LinearLayout;
+import android.view.KeyEvent;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
+import android.view.Window;
 import android.widget.SeekBar;
 import android.widget.TextView;
 
-import androidx.appcompat.app.AlertDialog;
+import androidx.annotation.NonNull;
 import androidx.preference.Preference;
+import androidx.preference.PreferenceViewHolder;
 
 import com.limelight.R;
 
 import java.util.Locale;
 
-// Based on a Stack Overflow example: http://stackoverflow.com/questions/1974193/slider-on-my-preferencescreen
+/**
+ * A slider setting. The row shows the current value between arrows, and with a remote
+ * Left and Right change it in place. OK opens a side panel with a larger slider.
+ */
 public class SeekBarPreference extends Preference
 {
     private static final String ANDROID_SCHEMA_URL = "http://schemas.android.com/apk/res/android";
     private static final String SEEKBAR_SCHEMA_URL = "http://schemas.moonlight-stream.com/apk/res/seekbar";
 
-    private AlertDialog dialog;
+    private static final int PANEL_WIDTH_DP = 440;
+
     private SeekBar seekBar;
-    private TextView valueText;
     private final Context context;
 
     private final String dialogMessage;
@@ -67,60 +76,95 @@ public class SeekBarPreference extends Preference
         divisor = attrs.getAttributeIntValue(SEEKBAR_SCHEMA_URL, "divisor", 1);
         keyStepSize = attrs.getAttributeIntValue(SEEKBAR_SCHEMA_URL, "keyStep", 0);
         seekbarMax = maxValue - minValue;
+
+        setWidgetLayoutResource(R.layout.preference_widget_inline_value);
     }
 
-    protected AlertDialog getDialog() {
-        if (dialog != null) {
-            return dialog;
+    // "80.0 Mbps", "100%": the value as the row and the panel show it
+    private String format(int value) {
+        String t;
+        if (divisor != 1) {
+            t = String.format((Locale) null, "%.1f", value / (float) divisor);
+        }
+        else {
+            t = String.valueOf(value);
+        }
+        return suffix == null ? t : t.concat(suffix.length() > 1 ? " " + suffix : suffix);
+    }
+
+    private int clampToStep(int value) {
+        int rounded = Math.round((float) value / stepSize) * stepSize;
+        return Math.max(minValue, Math.min(maxValue, rounded));
+    }
+
+    private void saveValue(int value) {
+        currentValue = value;
+        if (shouldPersist()) {
+            persistInt(currentValue);
+            callChangeListener(currentValue);
+        }
+        notifyChanged();
+    }
+
+    @Override
+    public void onBindViewHolder(@NonNull PreferenceViewHolder holder) {
+        super.onBindViewHolder(holder);
+
+        TextView valueView = (TextView) holder.findViewById(R.id.inline_value);
+        if (valueView != null) {
+            valueView.setText(format(currentValue));
         }
 
-        LinearLayout.LayoutParams params;
-        LinearLayout layout = new LinearLayout(context);
-        layout.setOrientation(LinearLayout.VERTICAL);
-        layout.setPadding(6, 6, 6, 6);
+        holder.itemView.setOnKeyListener((v, keyCode, event) -> {
+            if (event.getAction() != KeyEvent.ACTION_DOWN || !isEnabled()) {
+                return false;
+            }
+            if (keyCode == KeyEvent.KEYCODE_DPAD_LEFT) {
+                return step(-1);
+            }
+            if (keyCode == KeyEvent.KEYCODE_DPAD_RIGHT) {
+                return step(1);
+            }
+            return false;
+        });
+    }
 
-        TextView splashText = new TextView(context);
-        splashText.setPadding(30, 10, 30, 10);
+    // Moves one key step. At either end the key is left alone, so Left on the
+    // lowest value still moves focus back to the categories.
+    private boolean step(int direction) {
+        int increment = keyStepSize != 0 ? keyStepSize : stepSize;
+        int next = clampToStep(currentValue + direction * increment);
+        if (next == currentValue) {
+            return false;
+        }
+        saveValue(next);
+        return true;
+    }
+
+    public void showDialog() {
+        final Dialog dialog = new Dialog(context, R.style.Ariane_SidePanel);
+        View root = LayoutInflater.from(dialog.getContext()).inflate(R.layout.seekbar_panel, null);
+
+        ((TextView) root.findViewById(R.id.seekPanelTitle)).setText(getTitle());
+        TextView message = root.findViewById(R.id.seekPanelMessage);
         if (dialogMessage != null) {
-            splashText.setText(dialogMessage);
+            message.setText(dialogMessage);
         }
-        layout.addView(splashText);
+        else {
+            message.setVisibility(View.GONE);
+        }
 
-        valueText = new TextView(context);
-        valueText.setGravity(Gravity.CENTER_HORIZONTAL);
-        valueText.setTextSize(32);
-        // Default text for value; hides bug where OnSeekBarChangeListener isn't called when opacity is 0%
-        valueText.setText("0%");
-        params = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT);
-        layout.addView(valueText, params);
-
-        seekBar = new SeekBar(context);
+        final TextView valueText = root.findViewById(R.id.seekPanelValue);
+        seekBar = root.findViewById(R.id.seekPanelBar);
         seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
-            public void onProgressChanged(SeekBar seekBar, int value, boolean b) {
-                value += minValue;
-                if (value < minValue) {
-                    seekBar.setProgress(0);
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                int value = clampToStep(progress + minValue);
+                if (value - minValue != progress) {
+                    seekBar.setProgress(value - minValue);
                     return;
                 }
-
-                int roundedValue = Math.round((float)value / stepSize) * stepSize;
-                if (roundedValue != value) {
-                    seekBar.setProgress(roundedValue - minValue);
-                    return;
-                }
-
-                String t;
-                if (divisor != 1) {
-                    float floatValue = roundedValue / (float)divisor;
-                    t = String.format((Locale)null, "%.1f", floatValue);
-                }
-                else {
-                    t = String.valueOf(value);
-                }
-                valueText.setText(suffix == null ? t : t.concat(suffix.length() > 1 ? " "+suffix : suffix));
+                valueText.setText(format(value));
             }
 
             @Override
@@ -130,35 +174,37 @@ public class SeekBarPreference extends Preference
             public void onStopTrackingTouch(SeekBar seekBar) {}
         });
 
-        layout.addView(seekBar, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
-
         if (shouldPersist()) {
             currentValue = getPersistedInt(defaultValue);
         }
+        updateSeekbar();
+        valueText.setText(format(clampToStep(currentValue)));
 
-        seekBar.setMax(seekbarMax);
-        if (keyStepSize != 0) {
-            seekBar.setKeyProgressIncrement(keyStepSize);
-        }
-        seekBar.setProgress(currentValue - minValue);
-
-        AlertDialog.Builder dialogBuilder = new AlertDialog.Builder(context);
-        dialogBuilder.setTitle(getTitle());
-        dialogBuilder.setView(layout);
-
-        dialogBuilder.setPositiveButton("OK", (dialog, which) -> {
-            if (shouldPersist()) {
-                currentValue = seekBar.getProgress() + minValue;
-                persistInt(currentValue);
-                callChangeListener(currentValue);
-            }
-
+        Runnable save = () -> {
+            saveValue(seekBar.getProgress() + minValue);
             dialog.dismiss();
+        };
+        // OK on the slider saves, like the hint says
+        seekBar.setOnKeyListener((v, keyCode, event) -> {
+            if ((keyCode == KeyEvent.KEYCODE_DPAD_CENTER || keyCode == KeyEvent.KEYCODE_ENTER ||
+                    keyCode == KeyEvent.KEYCODE_BUTTON_A) && event.getAction() == KeyEvent.ACTION_UP) {
+                save.run();
+                return true;
+            }
+            return false;
         });
-        dialogBuilder.setNegativeButton(context.getString(R.string.cancel), (dialog, which) -> dialog.dismiss());
+        root.findViewById(R.id.seekPanelSave).setOnClickListener(v -> save.run());
+        root.findViewById(R.id.seekPanelCancel).setOnClickListener(v -> dialog.dismiss());
 
-        dialog = dialogBuilder.create();
-        return dialog;
+        dialog.setContentView(root);
+        Window window = dialog.getWindow();
+        if (window != null) {
+            float density = context.getResources().getDisplayMetrics().density;
+            window.setGravity(Gravity.END);
+            window.setLayout((int) (PANEL_WIDTH_DP * density), ViewGroup.LayoutParams.MATCH_PARENT);
+        }
+        dialog.show();
+        seekBar.requestFocus();
     }
 
     protected void updateSeekbar() {
@@ -186,15 +232,10 @@ public class SeekBarPreference extends Preference
         if (seekBar != null) {
             seekBar.setProgress(progress - minValue);
         }
+        notifyChanged();
     }
     public int getProgress() {
         return currentValue + minValue;
-    }
-
-    public void showDialog() {
-        AlertDialog dialog = getDialog();
-        updateSeekbar();
-        dialog.show();
     }
 
     @Override

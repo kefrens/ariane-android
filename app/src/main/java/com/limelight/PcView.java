@@ -25,6 +25,7 @@ import com.limelight.preferences.StreamSettings;
 import com.limelight.profiles.ProfilesManager;
 import com.limelight.ui.AmbientBackgroundDrawable;
 import com.limelight.ui.ContextMenuPanel;
+import com.limelight.ui.ControllerHints;
 import com.limelight.ui.AdapterFragment;
 import com.limelight.ui.AdapterFragmentCallbacks;
 import com.limelight.ui.TvOptionsKey;
@@ -44,6 +45,7 @@ import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
+import android.hardware.input.InputManager;
 import android.net.Uri;
 import android.opengl.GLSurfaceView;
 import android.os.Build;
@@ -200,10 +202,7 @@ public class PcView extends AppCompatActivity implements AdapterFragmentCallback
             .replace(R.id.pcFragmentContainer, new AdapterFragment())
             .commitAllowingStateLoss();
 
-        // The remote hints only help when there is no touchscreen
-        if (!getPackageManager().hasSystemFeature(PackageManager.FEATURE_TOUCHSCREEN)) {
-            findViewById(R.id.homeHint).setVisibility(View.VISIBLE);
-        }
+        updateHomeHint();
 
         noPcFoundLayout = findViewById(R.id.no_pc_found_layout);
         if (pcGridAdapter.getComputerCount() == 0) {
@@ -381,6 +380,10 @@ public class PcView extends AppCompatActivity implements AdapterFragmentCallback
     protected void onResume() {
         super.onResume();
 
+        updateHomeHint();
+        InputManager inputManager = (InputManager) getSystemService(Context.INPUT_SERVICE);
+        inputManager.registerInputDeviceListener(gamepadListener, null);
+
         // Display a decoder crash notification if we've returned after a crash
         UiHelper.showDecoderCrashDialog(this);
 
@@ -393,6 +396,9 @@ public class PcView extends AppCompatActivity implements AdapterFragmentCallback
     @Override
     protected void onPause() {
         super.onPause();
+
+        InputManager inputManager = (InputManager) getSystemService(Context.INPUT_SERVICE);
+        inputManager.unregisterInputDeviceListener(gamepadListener);
 
         inForeground = false;
         stopComputerUpdates(false);
@@ -886,6 +892,40 @@ public class PcView extends AppCompatActivity implements AdapterFragmentCallback
         pcGridAdapter.notifyDataSetChanged();
         updateRunningBanner();
     }
+
+    // Key hints for the remote or the connected gamepad. Touch-only devices don't need them.
+    private void updateHomeHint() {
+        TextView hint = findViewById(R.id.homeHint);
+        if (hint == null) {
+            return;
+        }
+
+        ControllerHints.Pad pad = ControllerHints.connectedPad();
+        boolean touch = getPackageManager().hasSystemFeature(PackageManager.FEATURE_TOUCHSCREEN);
+        if (touch && pad == ControllerHints.Pad.NONE) {
+            hint.setVisibility(View.GONE);
+            return;
+        }
+        hint.setText(ControllerHints.homeHint(pad));
+        hint.setVisibility(View.VISIBLE);
+    }
+
+    private final InputManager.InputDeviceListener gamepadListener = new InputManager.InputDeviceListener() {
+        @Override
+        public void onInputDeviceAdded(int deviceId) {
+            updateHomeHint();
+        }
+
+        @Override
+        public void onInputDeviceRemoved(int deviceId) {
+            updateHomeHint();
+        }
+
+        @Override
+        public void onInputDeviceChanged(int deviceId) {
+            updateHomeHint();
+        }
+    };
 
     private void resumeRunningApp(ComputerDetails details) {
         if (managerBinder == null) {

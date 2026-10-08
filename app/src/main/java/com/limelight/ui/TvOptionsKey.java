@@ -6,14 +6,15 @@ import android.view.View;
 import android.widget.AbsListView;
 
 /**
- * Lets the remote's menu key (or Y on a gamepad) open the options of the focused
+ * Lets the remote's menu key (or Y or the Menu/Options button on a gamepad) open the options of the focused
  * host or app, so nothing on a TV needs a long press of OK.
  */
 public final class TvOptionsKey {
     private TvOptionsKey() {}
 
     static boolean isOptionsKey(int keyCode) {
-        return keyCode == KeyEvent.KEYCODE_MENU || keyCode == KeyEvent.KEYCODE_BUTTON_Y;
+        return keyCode == KeyEvent.KEYCODE_MENU || keyCode == KeyEvent.KEYCODE_BUTTON_Y ||
+                keyCode == KeyEvent.KEYCODE_BUTTON_START;
     }
 
     /**
