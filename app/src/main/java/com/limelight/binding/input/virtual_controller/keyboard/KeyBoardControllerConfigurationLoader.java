@@ -4,6 +4,7 @@
 
 package com.limelight.binding.input.virtual_controller.keyboard;
 
+import com.limelight.binding.input.virtual_controller.VirtualControllerElement;
 import static com.limelight.binding.input.KeyboardTranslator.getModifier;
 
 import android.app.Activity;
@@ -377,7 +378,7 @@ public class KeyBoardControllerConfigurationLoader {
             is.read(buffer);
             result = new String(buffer, "utf8");
         } catch (Exception e) {
-            e.printStackTrace();
+            LimeLog.exception(e);
         }
         if (TextUtils.isEmpty(result)) {
             return;
@@ -537,7 +538,7 @@ public class KeyBoardControllerConfigurationLoader {
                         }
                     }
                 } catch (Exception e) {
-                    e.printStackTrace();
+                    LimeLog.exception(e);
                     Toast.makeText(context, context.getString(R.string.wrong_import_format), Toast.LENGTH_SHORT).show();
                 }
             }
@@ -555,12 +556,12 @@ public class KeyBoardControllerConfigurationLoader {
 
         SharedPreferences.Editor prefEditor = context.getSharedPreferences(name, Activity.MODE_PRIVATE).edit();
 
-        for (keyBoardVirtualControllerElement element : controller.getElements()) {
+        for (VirtualControllerElement<KeyBoardController> element : controller.getElements()) {
             String prefKey = "" + element.elementId;
             try {
                 prefEditor.putString(prefKey, element.getConfiguration().toString());
             } catch (JSONException e) {
-                e.printStackTrace();
+                LimeLog.exception(e);
             }
         }
         prefEditor.apply();
@@ -571,7 +572,7 @@ public class KeyBoardControllerConfigurationLoader {
 
         SharedPreferences pref = context.getSharedPreferences(name, Activity.MODE_PRIVATE);
 
-        for (keyBoardVirtualControllerElement element : controller.getElements()) {
+        for (VirtualControllerElement<KeyBoardController> element : controller.getElements()) {
             String prefKey = "" + element.elementId;
 
             String jsonConfig = pref.getString(prefKey, null);
@@ -579,7 +580,7 @@ public class KeyBoardControllerConfigurationLoader {
                 try {
                     element.loadConfiguration(new JSONObject(jsonConfig));
                 } catch (JSONException e) {
-                    e.printStackTrace();
+                    LimeLog.exception(e);
 
                     // Remove the corrupt element from the preferences
                     pref.edit().remove(prefKey).apply();

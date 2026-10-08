@@ -120,7 +120,7 @@ public class ServerHelper {
                 gameIntent.putExtra(Game.EXTRA_SERVER_CERT, computer.serverCert.getEncoded());
             }
         } catch (CertificateEncodingException e) {
-            e.printStackTrace();
+            LimeLog.exception(e);
         }
 
         if (prefConfig.enableFullExDisplay) {
@@ -223,7 +223,7 @@ public class ServerHelper {
                 } catch (IOException | XmlPullParserException e) {
                     failed = true;
                     message = e.getMessage();
-                    e.printStackTrace();
+                    LimeLog.exception(e);
                 } finally {
                     if (failed) {
                         if (onFail != null) {
@@ -265,7 +265,7 @@ public class ServerHelper {
                     null
             );
         } catch (Exception e) {
-            e.printStackTrace();
+            LimeLog.exception(e);
 
             final String toastMessage = e.getMessage();
             parent.runOnUiThread(() -> Toast.makeText(parent, toastMessage, Toast.LENGTH_LONG).show());

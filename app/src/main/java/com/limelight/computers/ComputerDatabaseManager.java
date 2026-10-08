@@ -133,7 +133,7 @@ public class ComputerDatabaseManager {
             }
         } catch (CertificateEncodingException e) {
             values.put(SERVER_CERT_COLUMN_NAME, (byte[])null);
-            e.printStackTrace();
+            LimeLog.exception(e);
         }
         return -1 != computerDb.insertWithOnConflict(COMPUTER_TABLE_NAME, null, values, SQLiteDatabase.CONFLICT_REPLACE);
     }
@@ -171,7 +171,7 @@ public class ComputerDatabaseManager {
                         .generateCertificate(new ByteArrayInputStream(derCertData));
             }
         } catch (CertificateException e) {
-            e.printStackTrace();
+            LimeLog.exception(e);
         }
 
         // This signifies we don't have dynamic state (like pair state)

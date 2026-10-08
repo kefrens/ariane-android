@@ -499,7 +499,7 @@ public class StreamSettings extends AppCompatActivity {
                     try {
                         addNativeResolutionEntries(Integer.parseInt(resolutionSegments[0]), Integer.parseInt(resolutionSegments[1]), false, true);
                     } catch (Exception e) {
-                        e.printStackTrace();
+                        LimeLog.exception(e);
                     }
                 }
             }
@@ -1083,7 +1083,7 @@ public class StreamSettings extends AppCompatActivity {
                     prefEditor.apply();
                     Toast.makeText(getActivity(), getString(R.string.pref_import_success), Toast.LENGTH_SHORT).show();
                 } catch (Exception e) {
-                    e.printStackTrace();
+                    LimeLog.exception(e);
                     Toast.makeText(getActivity(), getString(R.string.pref_error_occurred) + e.getMessage(), Toast.LENGTH_SHORT).show();
                 }
                 return;
@@ -1102,7 +1102,7 @@ public class StreamSettings extends AppCompatActivity {
                     prefEditor.apply();
                     Toast.makeText(getActivity(), getString(R.string.pref_import_success), Toast.LENGTH_SHORT).show();
                 } catch (Exception e) {
-                    e.printStackTrace();
+                    LimeLog.exception(e);
                     Toast.makeText(getActivity(), getString(R.string.pref_error_occurred) + e.getMessage(), Toast.LENGTH_SHORT).show();
                 }
             }

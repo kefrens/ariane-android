@@ -137,7 +137,7 @@ public class AppView extends AppCompatActivity implements AdapterFragmentCallbac
                                 computer, localBinder.getUniqueId(),
                                 showHiddenApps);
                     } catch (Exception e) {
-                        e.printStackTrace();
+                        LimeLog.exception(e);
                         finish();
                         return;
                     }
@@ -173,7 +173,7 @@ public class AppView extends AppCompatActivity implements AdapterFragmentCallbac
                                         .replace(R.id.appFragmentContainer, new AdapterFragment())
                                         .commitAllowingStateLoss();
                             } catch (IllegalStateException e) {
-                                e.printStackTrace();
+                                LimeLog.exception(e);
                             }
                         }
                     });
@@ -204,7 +204,7 @@ public class AppView extends AppCompatActivity implements AdapterFragmentCallbac
                         .replace(R.id.appFragmentContainer, new AdapterFragment())
                         .commitAllowingStateLoss();
             } catch (IllegalStateException e) {
-                e.printStackTrace();
+                LimeLog.exception(e);
             }
         }
     }
@@ -285,7 +285,7 @@ public class AppView extends AppCompatActivity implements AdapterFragmentCallbac
                         blockingLoadSpinner = null;
                     }
                 } catch (XmlPullParserException | IOException e) {
-                    e.printStackTrace();
+                    LimeLog.exception(e);
                 }
             }
         });
@@ -383,7 +383,7 @@ public class AppView extends AppCompatActivity implements AdapterFragmentCallbac
         } catch (IOException | XmlPullParserException e) {
             if (lastRawApplist != null) {
                 LimeLog.warning("Saved applist corrupted: "+lastRawApplist);
-                e.printStackTrace();
+                LimeLog.exception(e);
             }
             LimeLog.info("Loading applist from the network");
             // We'll need to load from the network

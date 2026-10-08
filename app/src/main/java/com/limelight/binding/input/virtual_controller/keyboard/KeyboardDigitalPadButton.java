@@ -1,5 +1,6 @@
 package com.limelight.binding.input.virtual_controller.keyboard;
 
+import com.limelight.binding.input.virtual_controller.VirtualControllerElement;
 import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Color;
@@ -9,7 +10,7 @@ import android.view.MotionEvent;
 import java.util.ArrayList;
 import java.util.List;
 
-public class KeyboardDigitalPadButton extends keyBoardVirtualControllerElement{
+public class KeyboardDigitalPadButton extends VirtualControllerElement<KeyBoardController>{
 
     private String value;
 

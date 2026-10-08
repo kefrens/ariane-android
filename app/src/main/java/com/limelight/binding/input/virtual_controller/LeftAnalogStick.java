@@ -8,7 +8,7 @@ import android.content.Context;
 
 import com.limelight.nvstream.input.ControllerPacket;
 
-public class LeftAnalogStick extends AnalogStick {
+public class LeftAnalogStick extends AnalogStick<VirtualController> {
     public LeftAnalogStick(final VirtualController controller, final Context context) {
         super(controller, context, EID_LS);
 

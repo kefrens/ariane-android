@@ -16,7 +16,7 @@ import java.util.List;
 /**
  * This is a analog stick on screen element. It is used to get 2-Axis user input.
  */
-public class AnalogStick extends VirtualControllerElement {
+public class AnalogStick<C extends ElementHost> extends VirtualControllerElement<C> {
 
     /**
      * outer radius size in percent of the ui element
@@ -164,7 +164,11 @@ public class AnalogStick extends VirtualControllerElement {
         }
     }
 
-    public AnalogStick(VirtualController controller, Context context, int elementId) {
+    public AnalogStick(C controller, Context context, int elementId) {
+        this(controller, context, String.valueOf(elementId));
+    }
+
+    public AnalogStick(C controller, Context context, String elementId) {
         super(controller, context, elementId);
         // reset stick position
         position_stick_x = getWidth() / 2;

@@ -18,7 +18,7 @@ import java.util.List;
 /**
  * This is a analog stick on screen element. It is used to get 2-Axis user input.
  */
-public class AnalogStickFree extends VirtualControllerElement {
+public class AnalogStickFree<C extends ElementHost> extends VirtualControllerElement<C> {
 
     /**
      * outer radius size in percent of the ui element
@@ -179,7 +179,11 @@ public class AnalogStickFree extends VirtualControllerElement {
         }
     }
 
-    public AnalogStickFree(VirtualController controller, Context context, int elementId) {
+    public AnalogStickFree(C controller, Context context, int elementId) {
+        this(controller, context, String.valueOf(elementId));
+    }
+
+    public AnalogStickFree(C controller, Context context, String elementId) {
         super(controller, context, elementId);
         // reset stick position
         position_stick_x = getWidth() / 2;
@@ -235,9 +239,9 @@ public class AnalogStickFree extends VirtualControllerElement {
 
     @Override
     protected void onElementDraw(Canvas canvas) {
-        boolean bIsMoving = virtualController.getControllerMode() == VirtualController.ControllerMode.MoveButtons;
-        boolean bIsResizing = virtualController.getControllerMode() == VirtualController.ControllerMode.ResizeButtons;
-        boolean bIsEnable = virtualController.getControllerMode() == VirtualController.ControllerMode.DisableEnableButtons;
+        boolean bIsMoving = virtualController.getControllerMode() == ControllerMode.MoveButtons;
+        boolean bIsResizing = virtualController.getControllerMode() == ControllerMode.ResizeButtons;
+        boolean bIsEnable = virtualController.getControllerMode() == ControllerMode.DisableEnableButtons;
 
         if (bIsMoving || bIsResizing || bIsEnable) {
             canvas.drawColor(getDefaultColor());
@@ -279,19 +283,20 @@ public class AnalogStickFree extends VirtualControllerElement {
 
                 case MOVED_IN_DEAD_ZONE:
                 case MOVED_ACTIVE: {
+                    if (drawsTouchArea()) {
+                        // Shade the area the stick can travel in, then outline the dead zone
+                        paint.setColor(bgCircleColor);
+                        paint.setStyle(Paint.Style.FILL_AND_STROKE);
+                        canvas.drawCircle(touchStartX, touchStartY, radius_complete, paint);
 
-                    paint.setColor(bgCircleColor);
-
-                    paint.setStyle(Paint.Style.FILL_AND_STROKE);
-
-                    canvas.drawCircle(touchStartX, touchStartY, radius_complete, paint);
-
-                    paint.setStyle(Paint.Style.STROKE);
-
-                    paint.setColor(strokeCircleColor);
-
-                    // draw start touch point circle
-                    canvas.drawCircle(touchStartX, touchStartY, radius_dead_zone, paint);
+                        paint.setStyle(Paint.Style.STROKE);
+                        paint.setColor(strokeCircleColor);
+                        canvas.drawCircle(touchStartX, touchStartY, radius_dead_zone, paint);
+                    } else {
+                        // Mark where the touch started
+                        paint.setColor(pressedColor);
+                        canvas.drawCircle(touchStartX, touchStartY, radius_analog_stick / 2.0f, paint);
+                    }
                     //paint.setColor(Color.RED);
                     // line from start point to current touch point
 //                    canvas.drawLine(touchStartX, touchStartY, position_stick_x, position_stick_y, paint);
@@ -318,7 +323,14 @@ public class AnalogStickFree extends VirtualControllerElement {
     @Override
     public void setOpacity(int opacity) {
         super.setOpacity(opacity);
-        setBgOpacity();
+        if (drawsTouchArea()) {
+            setBgOpacity();
+        }
+    }
+
+    // Whether a touch shows the stick's whole travel area, or only marks where it started
+    protected boolean drawsTouchArea() {
+        return true;
     }
 
     private void updatePosition(long eventTime) {

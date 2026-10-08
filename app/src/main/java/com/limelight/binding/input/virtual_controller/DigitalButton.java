@@ -19,7 +19,7 @@ import java.util.List;
 /**
  * This is a digital button on screen element. It is used to get click and double click user input.
  */
-public class DigitalButton extends VirtualControllerElement {
+public class DigitalButton extends VirtualControllerElement<VirtualController> {
 
     /**
      * Listener interface to update registered observers.
@@ -110,7 +110,7 @@ public class DigitalButton extends VirtualControllerElement {
     }
 
     private void checkMovementForAllButtons(float x, float y) {
-        for (VirtualControllerElement element : virtualController.getElements()) {
+        for (VirtualControllerElement<VirtualController> element : virtualController.getElements()) {
             if (element != this && element instanceof DigitalButton) {
                 ((DigitalButton) element).checkMovement(x, y, this);
             }
@@ -184,9 +184,9 @@ public class DigitalButton extends VirtualControllerElement {
             canvas.drawText(text, getPercent(getWidth(), 50), getPercent(getHeight(), 63), paint);
         }
 
-        boolean bIsMoving = virtualController.getControllerMode() == VirtualController.ControllerMode.MoveButtons;
-        boolean bIsResizing = virtualController.getControllerMode() == VirtualController.ControllerMode.ResizeButtons;
-        boolean bIsEnable = virtualController.getControllerMode() == VirtualController.ControllerMode.DisableEnableButtons;
+        boolean bIsMoving = virtualController.getControllerMode() == ControllerMode.MoveButtons;
+        boolean bIsResizing = virtualController.getControllerMode() == ControllerMode.ResizeButtons;
+        boolean bIsEnable = virtualController.getControllerMode() == ControllerMode.DisableEnableButtons;
 
         if (bIsMoving || bIsResizing || bIsEnable ||icon==-1) {
             paint.setStyle(Paint.Style.STROKE);

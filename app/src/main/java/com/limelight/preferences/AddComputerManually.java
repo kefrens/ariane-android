@@ -1,5 +1,6 @@
 package com.limelight.preferences;
 
+import com.limelight.LimeLog;
 import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.InterfaceAddress;
@@ -95,7 +96,7 @@ public class AddComputerManually extends AppCompatActivity {
         } catch (Exception e) {
             // Catch all exceptions because some broken Android devices
             // will throw an NPE from inside getNetworkInterfaces().
-            e.printStackTrace();
+            LimeLog.exception(e);
             return false;
         }
     }
@@ -158,7 +159,7 @@ public class AddComputerManually extends AppCompatActivity {
         } catch (IllegalArgumentException e) {
             // This can be thrown from OkHttp if the host fails to canonicalize to a valid name.
             // https://github.com/square/okhttp/blob/okhttp_27/okhttp/src/main/java/com/squareup/okhttp/HttpUrl.java#L705
-            e.printStackTrace();
+            LimeLog.exception(e);
             success = false;
             invalidInput = true;
         }
@@ -246,7 +247,7 @@ public class AddComputerManually extends AppCompatActivity {
             try {
                 addThread.join();
             } catch (InterruptedException e) {
-                e.printStackTrace();
+                LimeLog.exception(e);
 
                 // InterruptedException clears the thread's interrupt status. Since we can't
                 // handle that here, we will re-interrupt the thread to set the interrupt

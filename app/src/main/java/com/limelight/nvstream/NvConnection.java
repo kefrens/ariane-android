@@ -80,7 +80,7 @@ public class NvConnection {
 
             return keyGen.generateKey();
         } catch (NoSuchAlgorithmException e) {
-            e.printStackTrace();
+            LimeLog.exception(e);
             throw new RuntimeException(e);
         }
     }
@@ -113,7 +113,7 @@ public class NvConnection {
                 s.connect(new InetSocketAddress(addr, context.serverAddress.port), 1000);
                 return addr;
             } catch (IOException e) {
-                e.printStackTrace();
+                LimeLog.exception(e);
             }
         }
 
@@ -153,7 +153,7 @@ public class NvConnection {
                     try {
                         serverAddress = resolveServerAddress();
                     } catch (IOException e) {
-                        e.printStackTrace();
+                        LimeLog.exception(e);
 
                         // We can't decide without being able to resolve the server address
                         return StreamConfiguration.STREAM_CFG_AUTO;
@@ -409,14 +409,14 @@ public class NvConnection {
                         }
                         context.connListener.stageComplete(appName);
                     } catch (HostHttpResponseException e) {
-                        e.printStackTrace();
+                        LimeLog.exception(e);
                         context.connListener.displayMessage(e.getMessage());
                         retry = context.connListener.stageFailed(appName, 0, e.getErrorCode());
                         if (!retry) {
                             return;
                         }
                     } catch (XmlPullParserException | IOException e) {
-                        e.printStackTrace();
+                        LimeLog.exception(e);
                         context.connListener.displayMessage(e.getMessage());
                         retry = context.connListener.stageFailed(appName, MoonBridge.ML_PORT_FLAG_TCP_47984 | MoonBridge.ML_PORT_FLAG_TCP_47989, tryCount < 2 ? 0 : -408);
                         if (!retry) {

@@ -1,9 +1,10 @@
 package com.limelight.binding.input.virtual_controller.keyboard;
 
+import com.limelight.binding.input.virtual_controller.AnalogStickFree;
 import android.content.Context;
 
 
-public class KeyBoardAnalogStickButtonFree extends keyAnalogStickFree {
+public class KeyBoardAnalogStickButtonFree extends AnalogStickFree<KeyBoardController> {
 
     private final int MIN_CIRCLE_R = 10000;  //当摇杆移动的非常小时，不产生操作，摇杆范围-32765<x,y<32765
     private final float EIGHTH_PI = 0.4142f;  // y=tan(π/8)x 分界线
@@ -20,6 +21,11 @@ public class KeyBoardAnalogStickButtonFree extends keyAnalogStickFree {
 
     public void setListener(KeyBoardAnalogStickListener listener) {
         this.listener = listener;
+    }
+
+    @Override
+    protected boolean drawsTouchArea() {
+        return false;
     }
 
     public KeyBoardAnalogStickButtonFree(KeyBoardController controller, String elementId, Context context,

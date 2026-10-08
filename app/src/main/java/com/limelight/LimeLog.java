@@ -2,6 +2,7 @@ package com.limelight;
 
 import java.io.IOException;
 import java.util.logging.FileHandler;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class LimeLog {
@@ -17,6 +18,11 @@ public class LimeLog {
     
     public static void severe(String msg) {
         LOGGER.severe(msg);
+    }
+    
+    // Logs an exception we recover from, with its stack trace
+    public static void exception(Throwable t) {
+        LOGGER.log(Level.WARNING, t.toString(), t);
     }
     
     public static void setFileHandler(String fileName) throws IOException {

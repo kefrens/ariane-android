@@ -1,4 +1,4 @@
-package com.limelight.binding.input.virtual_controller.keyboard;
+package com.limelight.binding.input.virtual_controller;
 
 import android.view.View;
 import android.widget.FrameLayout;

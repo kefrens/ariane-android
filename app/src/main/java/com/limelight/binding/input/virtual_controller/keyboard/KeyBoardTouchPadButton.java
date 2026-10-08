@@ -4,6 +4,7 @@
 
 package com.limelight.binding.input.virtual_controller.keyboard;
 
+import com.limelight.binding.input.virtual_controller.VirtualControllerElement;
 import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Color;
@@ -22,7 +23,7 @@ import java.util.List;
 /**
  * This is a digital button on screen element. It is used to get click and double click user input.
  */
-public class KeyBoardTouchPadButton extends keyBoardVirtualControllerElement {
+public class KeyBoardTouchPadButton extends VirtualControllerElement<KeyBoardController> {
 
     /**
      * Listener interface to update registered observers.
@@ -113,7 +114,7 @@ public class KeyBoardTouchPadButton extends keyBoardVirtualControllerElement {
     }
 
     private void checkMovementForAllButtons(float x, float y) {
-        for (keyBoardVirtualControllerElement element : virtualController.getElements()) {
+        for (VirtualControllerElement<KeyBoardController> element : virtualController.getElements()) {
             if (element != this && element instanceof KeyBoardTouchPadButton) {
                 ((KeyBoardTouchPadButton) element).checkMovement(x, y, this);
             }
