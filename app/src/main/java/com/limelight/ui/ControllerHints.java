@@ -40,14 +40,37 @@ public final class ControllerHints {
         return vendorId == VENDOR_SONY ? Pad.PLAYSTATION : Pad.XBOX;
     }
 
-    public static int homeHint(Pad pad) {
+    /** One hint: the buttons that do something, drawn as on the controller, and what they do. */
+    public static final class Hint {
+        public final int[] buttons;
+        public final int label;
+
+        Hint(int label, int... buttons) {
+            this.buttons = buttons;
+            this.label = label;
+        }
+    }
+
+    public static Hint[] homeHints(Pad pad) {
         switch (pad) {
             case PLAYSTATION:
-                return R.string.home_hint_playstation;
+                return new Hint[]{
+                        new Hint(R.string.hint_open, R.drawable.btn_ps_cross),
+                        new Hint(R.string.hint_host_options, R.drawable.btn_menu, R.drawable.btn_ps_triangle),
+                        new Hint(R.string.hint_move_hosts, R.drawable.btn_dpad_lr),
+                };
             case XBOX:
-                return R.string.home_hint_xbox;
+                return new Hint[]{
+                        new Hint(R.string.hint_open, R.drawable.btn_xbox_a),
+                        new Hint(R.string.hint_host_options, R.drawable.btn_menu, R.drawable.btn_xbox_y),
+                        new Hint(R.string.hint_move_hosts, R.drawable.btn_dpad_lr),
+                };
             default:
-                return R.string.home_hint;
+                return new Hint[]{
+                        new Hint(R.string.hint_open, R.drawable.btn_remote_ok),
+                        new Hint(R.string.hint_host_options, R.drawable.btn_menu),
+                        new Hint(R.string.hint_move_hosts, R.drawable.btn_dpad_lr),
+                };
         }
     }
 }

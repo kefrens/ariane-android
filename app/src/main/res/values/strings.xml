@@ -137,9 +137,9 @@
     <string name="home_running_unknown_app">A game</string>
     <string name="home_add_host">Add host</string>
     <string name="home_add_host_detail">By IP address</string>
-    <string name="home_hint">OK  Open      ☰  Host options      ◀ ▶  Move between hosts</string>
-    <string name="home_hint_xbox">A  Open      ☰ or Y  Host options      ◀ ▶  Move between hosts</string>
-    <string name="home_hint_playstation">✕  Open      ☰ or △  Host options      ◀ ▶  Move between hosts</string>
+    <string name="hint_open">Open</string>
+    <string name="hint_host_options">Host options</string>
+    <string name="hint_move_hosts">Move between hosts</string>
     <string name="applist_search">Search</string>
     <string name="applist_jump_title">Jump to letter</string>
     <string name="seek_panel_hint">◀ ▶  to change, OK to save</string>

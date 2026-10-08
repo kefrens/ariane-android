@@ -66,6 +66,7 @@ import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemClickListener;
 import android.widget.EditText;
 import android.widget.ImageButton;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
@@ -895,7 +896,7 @@ public class PcView extends AppCompatActivity implements AdapterFragmentCallback
 
     // Key hints for the remote or the connected gamepad. Touch-only devices don't need them.
     private void updateHomeHint() {
-        TextView hint = findViewById(R.id.homeHint);
+        LinearLayout hint = findViewById(R.id.homeHint);
         if (hint == null) {
             return;
         }
@@ -906,7 +907,31 @@ public class PcView extends AppCompatActivity implements AdapterFragmentCallback
             hint.setVisibility(View.GONE);
             return;
         }
-        hint.setText(ControllerHints.homeHint(pad));
+
+        float density = getResources().getDisplayMetrics().density;
+        hint.removeAllViews();
+        StringBuilder description = new StringBuilder();
+        for (ControllerHints.Hint item : ControllerHints.homeHints(pad)) {
+            for (int button : item.buttons) {
+                ImageView icon = new ImageView(this);
+                icon.setImageResource(button);
+                LinearLayout.LayoutParams iconParams = new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+                iconParams.setMarginEnd((int) (4 * density));
+                hint.addView(icon, iconParams);
+            }
+            TextView label = new TextView(this);
+            label.setText(item.label);
+            label.setTextSize(15);
+            label.setTextColor(getResources().getColor(R.color.ariane_on_surface_variant));
+            LinearLayout.LayoutParams labelParams = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+            labelParams.setMarginStart((int) (4 * density));
+            labelParams.setMarginEnd((int) (32 * density));
+            hint.addView(label, labelParams);
+            description.append(getString(item.label)).append(". ");
+        }
+        hint.setContentDescription(description.toString().trim());
         hint.setVisibility(View.VISIBLE);
     }
 

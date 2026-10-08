@@ -127,9 +127,9 @@
     <string name="home_running_unknown_app">Un jeu</string>
     <string name="home_add_host">Ajouter un hôte</string>
     <string name="home_add_host_detail">Par adresse IP</string>
-    <string name="home_hint">OK  Ouvrir      ☰  Options de l\'hôte      ◀ ▶  Changer d\'hôte</string>
-    <string name="home_hint_xbox">A  Ouvrir      ☰ ou Y  Options de l\'hôte      ◀ ▶  Changer d\'hôte</string>
-    <string name="home_hint_playstation">✕  Ouvrir      ☰ ou △  Options de l\'hôte      ◀ ▶  Changer d\'hôte</string>
+    <string name="hint_open">Ouvrir</string>
+    <string name="hint_host_options">Options de l\'hôte</string>
+    <string name="hint_move_hosts">Changer d\'hôte</string>
     <string name="applist_search">Rechercher</string>
     <string name="applist_jump_title">Aller à la lettre</string>
     <string name="seek_panel_hint">◀ ▶  pour modifier, OK pour enregistrer</string>

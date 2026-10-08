@@ -140,16 +140,16 @@
         android:textColor="?android:attr/textColorSecondary"
         android:textSize="20sp" />
 
-    <TextView
+    <!-- Key hints, drawn as the buttons of the remote or gamepad in use (filled in by PcView) -->
+    <LinearLayout
         android:id="@+id/homeHint"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_alignParentBottom="true"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
         android:paddingTop="8dp"
         android:paddingBottom="16dp"
-        android:text="@string/home_hint"
-        android:textColor="?android:attr/textColorSecondary"
-        android:textSize="15sp"
         android:visibility="gone" />
 
     <RelativeLayout
