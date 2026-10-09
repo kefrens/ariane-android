@@ -3,5 +3,5 @@
     <corners
         android:topLeftRadius="24dp"
         android:bottomLeftRadius="24dp" />
-    <solid android:color="#F21F2730" />
+    <solid android:color="@color/ariane_side_panel" />
 </shape>

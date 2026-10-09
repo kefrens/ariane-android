@@ -21,6 +21,7 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import com.limelight.R;
+import com.limelight.utils.UiClass;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -54,7 +55,10 @@ public final class ContextMenuPanel {
             return;
         }
 
-        final Dialog dialog = new Dialog(activity, R.style.Ariane_SidePanel);
+        // A phone has no room for a side panel, so the menu rises from the bottom
+        final boolean sheet = UiClass.of(activity) == UiClass.PHONE;
+        final Dialog dialog = new Dialog(activity,
+                sheet ? R.style.Ariane_BottomSheet : R.style.Ariane_SidePanel);
         LayoutInflater inflater = LayoutInflater.from(dialog.getContext());
         View root = inflater.inflate(R.layout.option_panel, null);
 
@@ -63,6 +67,18 @@ public final class ContextMenuPanel {
         titleView.setVisibility(menu.headerTitle != null ? View.VISIBLE : View.GONE);
 
         LinearLayout listView = root.findViewById(R.id.optionPanelList);
+        if (sheet) {
+            float density = activity.getResources().getDisplayMetrics().density;
+            root.setBackgroundResource(R.drawable.bottom_sheet_bg);
+            root.setPadding((int) (16 * density), (int) (24 * density),
+                    (int) (16 * density), (int) (16 * density));
+            // Grow with the list instead of filling the screen
+            View scroll = (View) listView.getParent();
+            LinearLayout.LayoutParams scrollParams = (LinearLayout.LayoutParams) scroll.getLayoutParams();
+            scrollParams.height = ViewGroup.LayoutParams.WRAP_CONTENT;
+            scrollParams.weight = 0;
+            scroll.setLayoutParams(scrollParams);
+        }
         for (final Item item : menu.sortedVisibleItems()) {
             TextView row = (TextView) inflater.inflate(R.layout.settings_category_item, listView, false);
             row.setText(item.title);
@@ -87,8 +103,13 @@ public final class ContextMenuPanel {
         Window window = dialog.getWindow();
         if (window != null) {
             float density = activity.getResources().getDisplayMetrics().density;
-            window.setGravity(Gravity.END);
-            window.setLayout((int) (PANEL_WIDTH_DP * density), ViewGroup.LayoutParams.MATCH_PARENT);
+            if (sheet) {
+                window.setGravity(Gravity.BOTTOM);
+                window.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            } else {
+                window.setGravity(Gravity.END);
+                window.setLayout((int) (PANEL_WIDTH_DP * density), ViewGroup.LayoutParams.MATCH_PARENT);
+            }
         }
 
         dialog.show();

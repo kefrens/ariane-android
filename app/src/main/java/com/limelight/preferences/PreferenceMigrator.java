@@ -29,6 +29,16 @@ final class PreferenceMigrator {
      * setting if there was one (it has been moved to the current keys), or null.
      */
     static StreamMode migrate(Context context, SharedPreferences prefs) {
+        // Whoever had the floating button on keeps it. Everyone else keeps seeing nothing on
+        // screen, so an update never adds a button or a handle they did not choose.
+        if (!prefs.contains(PreferenceConfiguration.MENU_TRIGGER_PREF_STRING)
+                && prefs.contains(PreferenceConfiguration.LEGACY_FLOATING_BUTTON_PREF_STRING)) {
+            boolean floating = prefs.getBoolean(PreferenceConfiguration.LEGACY_FLOATING_BUTTON_PREF_STRING, false);
+            prefs.edit().putString(PreferenceConfiguration.MENU_TRIGGER_PREF_STRING,
+                    floating ? PreferenceConfiguration.MENU_TRIGGER_FLOATING
+                             : PreferenceConfiguration.MENU_TRIGGER_NONE).apply();
+        }
+
         if (prefs.contains(PreferenceConfiguration.LEGACY_ENABLE_51_SURROUND_PREF_STRING)) {
             if (prefs.getBoolean(PreferenceConfiguration.LEGACY_ENABLE_51_SURROUND_PREF_STRING, false)) {
                 prefs.edit()

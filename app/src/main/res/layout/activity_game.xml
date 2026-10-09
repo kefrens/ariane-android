@@ -102,6 +102,16 @@
         android:visibility="gone"
         android:elevation="9999dp" />
 
+    <!-- Stream menu handle: a tab on the right edge that opens the menu -->
+    <com.limelight.ui.MenuHandle
+        android:id="@+id/menuHandle"
+        android:layout_width="40dp"
+        android:layout_height="96dp"
+        android:layout_gravity="end|center_vertical"
+        android:contentDescription="@string/menu_handle_description"
+        android:elevation="9999dp"
+        android:visibility="gone" />
+
     <ImageButton
         android:id="@+id/overlayToggleZoomButton"
         android:layout_width="36dp"

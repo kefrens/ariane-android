@@ -112,6 +112,8 @@ public class ExternalDisplayControlActivity extends AppCompatActivity implements
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        // Controls shown next to the stream stay dark too
+        ThemeMode.pinDark(this);
         super.onCreate(savedInstanceState);
 
         instance = this;

@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Ariane Material 3 dark scheme, generated from seed #3B82C4.
+         On Android 12+ dynamic colour replaces these with wallpaper colours. -->
+    <color name="ariane_primary">#9CCAFF</color>
+    <color name="ariane_on_primary">#003258</color>
+    <color name="ariane_primary_container">#00497D</color>
+    <color name="ariane_on_primary_container">#D1E4FF</color>
+    <color name="ariane_secondary">#BBC7DB</color>
+    <color name="ariane_on_secondary">#253140</color>
+    <color name="ariane_secondary_container">#3B4858</color>
+    <color name="ariane_on_secondary_container">#D7E3F7</color>
+    <color name="ariane_tertiary">#FFB68B</color>
+    <color name="ariane_on_tertiary">#522300</color>
+    <color name="ariane_tertiary_container">#743500</color>
+    <color name="ariane_on_tertiary_container">#FFDBC8</color>
+    <color name="ariane_error">#FFB4AB</color>
+    <color name="ariane_on_error">#690005</color>
+    <color name="ariane_error_container">#93000A</color>
+    <color name="ariane_on_error_container">#FFDAD6</color>
+    <color name="ariane_background">#0F1419</color>
+    <color name="ariane_on_background">#E1E6EC</color>
+    <color name="ariane_surface">#0F1419</color>
+    <color name="ariane_on_surface">#E1E6EC</color>
+    <color name="ariane_surface_variant">#28323D</color>
+    <color name="ariane_on_surface_variant">#A8B3BF</color>
+    <color name="ariane_surface_container_low">#171D24</color>
+    <color name="ariane_surface_container">#1F2730</color>
+    <color name="ariane_surface_container_high">#28323D</color>
+    <color name="ariane_outline">#3A4552</color>
+    <color name="ariane_outline_variant">#2A333D</color>
+
+    <!-- D-pad focus indicator: white reads on every dark surface at 10-foot distance -->
+    <color name="focus_ring">#FFFFFFFF</color>
+    <!-- Settings section icons -->
+    <color name="section_blue">#9CCAFF</color>
+    <color name="section_amber">#F3C56B</color>
+    <color name="section_green">#7DD8A0</color>
+    <color name="section_violet">#C4B5FD</color>
+    <color name="section_pink">#F9A8D4</color>
+    <color name="section_orange">#FFB68B</color>
+
+    <!-- Glow behind the home screens: primary container at 60%, tertiary container at 35% -->
+    <color name="ariane_glow_cool">#9900497D</color>
+    <color name="ariane_glow_warm">#59743500</color>
+    <!-- Side panel for list choices -->
+    <color name="ariane_side_panel">#F21F2730</color>
+    <!-- Settings panel, slightly see-through so the glow shows -->
+    <color name="ariane_panel_overlay">#D9171D24</color>
+    <!-- Fades the game-art backdrop into the background colour -->
+    <color name="ariane_scrim_top">#660F1419</color>
+    <color name="ariane_scrim_mid">#990F1419</color>
+    <color name="ariane_scrim_bottom">#F20F1419</color>
+    <color name="ariane_scrim_side_start">#B30F1419</color>
+    <color name="ariane_scrim_side_end">#000F1419</color>
+    <!-- Pressed/focus highlight in platform dialogs -->
+    <color name="ariane_dialog_highlight">#3D9CCAFF</color>
+</resources>

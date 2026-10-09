@@ -37,6 +37,12 @@ public class PreferenceConfiguration {
 
     static final String LEGACY_RES_FPS_PREF_STRING = "list_resolution_fps";
     static final String LEGACY_ENABLE_51_SURROUND_PREF_STRING = "checkbox_51_surround";
+    // The Floating Button switch became the choice of how the stream menu opens
+    static final String LEGACY_FLOATING_BUTTON_PREF_STRING = "checkbox_enable_floating_button";
+    static final String MENU_TRIGGER_PREF_STRING = "list_menu_trigger";
+    public static final String MENU_TRIGGER_HANDLE = "handle";
+    public static final String MENU_TRIGGER_FLOATING = "floating";
+    public static final String MENU_TRIGGER_NONE = "none";
     static final String LEGACY_STRETCH_PREF_STRING = "checkbox_stretch_video";
     static final String LEGACY_ENFORCE_REFRESH_RATE_STRING = "checkbox_enforce_refresh_rate";
 
@@ -120,7 +126,7 @@ public class PreferenceConfiguration {
 
     private static final String CHECKBOX_ENABLE_QUIT_DIALOG = "checkbox_enable_quit_dialog";
 
-    private static final String CHECKBOX_ENABLE_FLOATING_BUTTON = "checkbox_enable_floating_button";
+    private static final String CHECKBOX_HIDE_MENU_TRIGGER_WITH_GAMEPAD = "checkbox_hide_menu_trigger_when_gamepad";
 
     private static final String CHECKBOX_SHOW_OVERLAY_ZOOM_TOGGLE_BUTTON = "checkbox_show_overlay_zoom_toggle_button";
 
@@ -204,7 +210,6 @@ public class PreferenceConfiguration {
     private static final boolean DEFAULT_SEND_META_ON_PHYSICAL_BACK = false;
     private static final boolean DEFAULT_RIGHT_ALT_AS_META = false;
     private static final boolean DEFAULT_IGNORE_SYNTH_EVENTS = false;
-    private static final boolean DEFAULT_ENABLE_FLOATING_BUTTON = false;
     private static final boolean DEFAULT_BACK_AS_GUIDE = false;
     private static final boolean DEFAULT_SMART_CLIPBOARD_SYNC = false;
     private static final boolean DEFAULT_SMART_CLIPBOARD_SYNC_TOAST = true;
@@ -292,7 +297,11 @@ public class PreferenceConfiguration {
 
     public boolean enableLatencyToast;
     public boolean enableBackMenu;
+    // How the stream menu opens on a touchscreen: a handle, a floating button, or nothing on screen
+    public String menuTrigger;
     public boolean enableFloatingButton;
+    public boolean enableMenuHandle;
+    public boolean hideMenuTriggerWithGamepad;
     public boolean showOverlayZoomToggleButton;
 
     //Invert video width/height
@@ -891,7 +900,11 @@ private static int getFramePacingValue(Context context) {
 //        config.touchscreenTrackpad = prefs.getBoolean(TOUCHSCREEN_TRACKPAD_PREF_STRING, DEFAULT_TOUCHSCREEN_TRACKPAD);
         config.enableLatencyToast = prefs.getBoolean(LATENCY_TOAST_PREF_STRING, DEFAULT_LATENCY_TOAST);
         config.enableBackMenu = prefs.getBoolean(CHECKBOX_ENABLE_QUIT_DIALOG,true);
-        config.enableFloatingButton = prefs.getBoolean(CHECKBOX_ENABLE_FLOATING_BUTTON,DEFAULT_ENABLE_FLOATING_BUTTON);
+        config.menuTrigger = prefs.getString(MENU_TRIGGER_PREF_STRING,
+                context.getString(com.limelight.R.string.default_menu_trigger));
+        config.enableFloatingButton = MENU_TRIGGER_FLOATING.equals(config.menuTrigger);
+        config.enableMenuHandle = MENU_TRIGGER_HANDLE.equals(config.menuTrigger);
+        config.hideMenuTriggerWithGamepad = prefs.getBoolean(CHECKBOX_HIDE_MENU_TRIGGER_WITH_GAMEPAD, true);
         config.showOverlayZoomToggleButton = prefs.getBoolean(CHECKBOX_SHOW_OVERLAY_ZOOM_TOGGLE_BUTTON, DEFAULT_SHOW_OVERLAY_TOGGLE_BUTTON);
         config.autoOrientation = prefs.getBoolean(CHECKBOX_AUTO_ORIENTATION,false);
         config.autoInvertVideoResolution = prefs.getBoolean(AUTO_INVERT_VIDEO_RESOLUTION_PREF_STRING, DEFAULT_AUTO_INVERT_VIDEO_RESOLUTION);

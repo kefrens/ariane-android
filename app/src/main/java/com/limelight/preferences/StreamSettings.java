@@ -15,6 +15,7 @@ import android.app.Activity;
 import android.os.Handler;
 import android.os.Vibrator;
 
+import androidx.activity.OnBackPressedCallback;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.FileProvider;
@@ -27,6 +28,8 @@ import androidx.preference.PreferenceCategory;
 import androidx.preference.PreferenceFragmentCompat;
 import androidx.preference.PreferenceManager;
 import androidx.preference.PreferenceScreen;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 import android.text.InputFilter;
 import android.text.InputType;
@@ -59,6 +62,7 @@ import com.limelight.ui.AmbientBackgroundDrawable;
 import com.limelight.utils.Dialog;
 import com.limelight.utils.FileUriUtils;
 import com.limelight.utils.PerformanceDataTracker;
+import com.limelight.utils.UiClass;
 import com.limelight.utils.UiHelper;
 import org.json.JSONObject;
 import java.io.File;
@@ -71,6 +75,14 @@ import java.util.Map;
 
 public class StreamSettings extends AppCompatActivity {
     private PreferenceConfiguration previousPrefs;
+    private int currentLayoutId;
+
+    private static final String STATE_CATEGORY_INDEX = "settings_category_index";
+    private static final String STATE_SCROLL_POSITION = "settings_scroll_position";
+    private static final String STATE_SCROLL_OFFSET = "settings_scroll_offset";
+    private int restoredCategoryIndex = -1;
+    private int restoredScrollPosition = -1;
+    private int restoredScrollOffset;
     private int previousDisplayPixelCount;
 
     private SettingsFragment prefsFragment;
@@ -96,13 +108,22 @@ public class StreamSettings extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
 //        setTheme(R.style.AppTheme);
-        super.onCreate(savedInstanceState);
+        // Don't restore the old fragment (a theme change recreates this activity): it has no
+        // empty constructor, and reloadSettings() builds a fresh one anyway
+        super.onCreate(null);
+        if (savedInstanceState != null) {
+            restoredCategoryIndex = savedInstanceState.getInt(STATE_CATEGORY_INDEX, -1);
+            restoredScrollPosition = savedInstanceState.getInt(STATE_SCROLL_POSITION, -1);
+            restoredScrollOffset = savedInstanceState.getInt(STATE_SCROLL_OFFSET, 0);
+        }
 
         previousPrefs = PreferenceConfiguration.readPreferences(this);
+        getOnBackPressedDispatcher().addCallback(this, backCallback);
 
         UiHelper.setLocale(this);
 
-        setContentView(R.layout.activity_stream_settings);
+        currentLayoutId = layoutForDevice();
+        setContentView(currentLayoutId);
         AmbientBackgroundDrawable.install(this);
         sidebar = SettingsSidebar.attach(this);
 
@@ -134,9 +155,44 @@ public class StreamSettings extends AppCompatActivity {
         reloadSettings();
     }
 
+    // Below this width the two-pane layout squeezes the options too much, as on a tablet held
+    // upright, so the window gets the drill-down layout that phones use
+    static final int TWO_PANE_MIN_WIDTH_DP = 900;
+
+    // Phones, and windows too narrow for two panes, get the drill-down layout. TVs and wide
+    // tablet windows keep the two-pane one.
+    private int layoutForDevice() {
+        UiClass uiClass = UiClass.of(this);
+        boolean narrow = getResources().getConfiguration().screenWidthDp < TWO_PANE_MIN_WIDTH_DP;
+        return UiClass.layoutFor(uiClass,
+                R.layout.activity_stream_settings,
+                R.layout.activity_stream_settings_phone,
+                narrow ? R.layout.activity_stream_settings_phone : R.layout.activity_stream_settings);
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+
+        // onAttachedToWindow() loads the settings, but Android does not call it again when it
+        // relaunches the activity into a window it kept, as when the window changes size. Post
+        // so that on a normal start it has already run and this does nothing.
+        getWindow().getDecorView().post(() -> {
+            if (prefsFragment == null && !isFinishing() && !isDestroyed()) {
+                reloadSettings();
+            }
+        });
+    }
+
     @Override
     public void onConfigurationChanged(Configuration newConfig) {
         super.onConfigurationChanged(newConfig);
+
+        // The window moved to another class of device (a fold, split screen): lay out again
+        if (layoutForDevice() != currentLayoutId) {
+            recreate();
+            return;
+        }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             Display.Mode mode = getActiveDisplay(StreamSettings.this, previousPrefs).getMode();
@@ -153,8 +209,27 @@ public class StreamSettings extends AppCompatActivity {
     }
 
     @Override
-    // NOTE: This will NOT be called on Android 13+ with android:enableOnBackInvokedCallback="true"
+    // NOTE: This will NOT be called on Android 13+ with android:enableOnBackInvokedCallback="true",
+    // where backCallback below takes over
     public void onBackPressed() {
+        // Inside a category or a search, back goes up one step first
+        if (sidebar != null && sidebar.handleBack()) {
+            return;
+        }
+        finishSettings();
+    }
+
+    private final OnBackPressedCallback backCallback = new OnBackPressedCallback(true) {
+        @Override
+        public void handleOnBackPressed() {
+            if (sidebar != null && sidebar.handleBack()) {
+                return;
+            }
+            finishSettings();
+        }
+    };
+
+    private void finishSettings() {
         finish();
 
         // Language changes are handled via configuration changes in Android 13+,
@@ -178,6 +253,43 @@ public class StreamSettings extends AppCompatActivity {
     void onPreferencesShown(SettingsFragment fragment) {
         if (sidebar != null) {
             sidebar.bind(fragment);
+        }
+        restoreListPosition(fragment);
+    }
+
+    // A theme change recreates this screen. Put the list back where it was, so the option
+    // that was just changed is still under the finger.
+    private void restoreListPosition(SettingsFragment fragment) {
+        if (restoredScrollPosition < 0) {
+            return;
+        }
+        if (sidebar != null) {
+            sidebar.selectIndex(restoredCategoryIndex);
+        }
+        RecyclerView list = fragment.getListView();
+        if (list != null && list.getLayoutManager() instanceof LinearLayoutManager) {
+            ((LinearLayoutManager) list.getLayoutManager())
+                    .scrollToPositionWithOffset(restoredScrollPosition, restoredScrollOffset);
+        }
+        restoredScrollPosition = -1;
+    }
+
+    @Override
+    protected void onSaveInstanceState(@NonNull Bundle outState) {
+        super.onSaveInstanceState(outState);
+        if (sidebar != null) {
+            outState.putInt(STATE_CATEGORY_INDEX, sidebar.selectedIndex());
+        }
+        RecyclerView list = prefsFragment != null ? prefsFragment.getListView() : null;
+        if (list != null && list.getLayoutManager() instanceof LinearLayoutManager) {
+            LinearLayoutManager layoutManager = (LinearLayoutManager) list.getLayoutManager();
+            int position = layoutManager.findFirstVisibleItemPosition();
+            if (position >= 0) {
+                View first = layoutManager.findViewByPosition(position);
+                outState.putInt(STATE_SCROLL_POSITION, position);
+                outState.putInt(STATE_SCROLL_OFFSET,
+                        first != null ? first.getTop() - list.getPaddingTop() : 0);
+            }
         }
     }
 

@@ -44,10 +44,12 @@ import com.limelight.preferences.PreferenceConfiguration;
 import com.limelight.profiles.ProfilesManager;
 import com.limelight.ui.ExternalControllerView;
 import com.limelight.ui.GameGestures;
+import com.limelight.ui.MenuHandle;
 import com.limelight.ui.StreamContainer;
 import com.limelight.utils.Dialog;
 import com.limelight.utils.ExternalDisplayControlActivity;
 import com.limelight.utils.MouseModeOption;
+import com.limelight.utils.ThemeMode;
 import com.limelight.utils.PanZoomHandler;
 import com.limelight.utils.PerformanceDataTracker;
 import com.limelight.utils.ServerHelper;
@@ -221,7 +223,6 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
 
     private boolean quitOnStop = false;
     private boolean isHidingOverlays;
-    private boolean floatingButtonShown;
     private boolean overlayToggleZoomButtonShown;
     private TextView notificationOverlayView;
     private int requestedNotificationOverlayVisibility = View.GONE;
@@ -300,6 +301,27 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
     private long streamStartedAtMs;
     private boolean onExternelDisplay = false;
     private ImageButton floatingMenuButton;
+    // The tab on the right edge that opens the stream menu
+    private MenuHandle menuHandle;
+    // Set when the menu's "Toggle Floating Button" was used: the floating button's visibility
+    // then follows that choice instead of the preference
+    private Boolean floatingButtonOverride;
+    private final InputManager.InputDeviceListener gamepadListener = new InputManager.InputDeviceListener() {
+        @Override
+        public void onInputDeviceAdded(int deviceId) {
+            applyMenuTriggerVisibility();
+        }
+
+        @Override
+        public void onInputDeviceRemoved(int deviceId) {
+            applyMenuTriggerVisibility();
+        }
+
+        @Override
+        public void onInputDeviceChanged(int deviceId) {
+            applyMenuTriggerVisibility();
+        }
+    };
     private ImageButton overlayToggleButton;
     private float floatingButtonDX, floatingButtonDY;
     private boolean isButtonMoving = false;
@@ -367,6 +389,8 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
     @SuppressLint({"MissingInflatedId", "ClickableViewAccessibility"})
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        // The stream is dark whatever the Theme setting says
+        ThemeMode.pinDark(this);
         super.onCreate(savedInstanceState);
 
         instance = this;
@@ -442,6 +466,7 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
             prefConfig.fps = currentMode.getRefreshRate();
             prefConfig.videoScaleMode = PreferenceConfiguration.ScaleMode.STRETCH;
             prefConfig.enableFloatingButton = false;
+            prefConfig.enableMenuHandle = false;
             prefConfig.showOverlayZoomToggleButton = false;
             prefConfig.enablePip = false;
             currentOrientation = Configuration.ORIENTATION_LANDSCAPE;
@@ -865,8 +890,18 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
         gameMenuCallbacks = new GameMenu(this);
 
         floatingMenuButton = findViewById(R.id.floatingMenuButton);
-        updateFloatingButtonVisibility(prefConfig.enableBackMenu && prefConfig.enableFloatingButton);
         initFloatingButton();
+
+        menuHandle = findViewById(R.id.menuHandle);
+        if (menuHandle != null) {
+            menuHandle.setOnClickListener(v -> showGameMenu(null));
+        }
+        applyMenuTriggerVisibility();
+        // A gamepad being plugged in or taken out shows or hides them
+        InputManager deviceManager = (InputManager) getSystemService(Context.INPUT_SERVICE);
+        if (deviceManager != null) {
+            deviceManager.registerInputDeviceListener(gamepadListener, null);
+        }
 
         overlayToggleButton = findViewById(R.id.overlayToggleZoomButton);
         setupOverlayToggleButton();
@@ -1193,11 +1228,7 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
             if (isInPictureInPictureMode()) {
                 isHidingOverlays = true;
 
-                floatingButtonShown = floatingMenuButton.isShown();
-
-                if (floatingButtonShown) {
-                    floatingMenuButton.setVisibility(View.GONE);
-                }
+                applyMenuTriggerVisibility();
 
                 overlayToggleZoomButtonShown = overlayToggleButton != null && overlayToggleButton.isShown();
 
@@ -1231,9 +1262,7 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
             else {
                 isHidingOverlays = false;
 
-                if (floatingButtonShown) {
-                    floatingMenuButton.setVisibility(View.VISIBLE);
-                }
+                applyMenuTriggerVisibility();
 
                 if (overlayToggleZoomButtonShown) {
                     overlayToggleButton.setVisibility(View.VISIBLE);
@@ -1685,6 +1714,11 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
     @Override
     protected void onDestroy() {
         super.onDestroy();
+
+        InputManager deviceManager = (InputManager) getSystemService(Context.INPUT_SERVICE);
+        if (deviceManager != null) {
+            deviceManager.unregisterInputDeviceListener(gamepadListener);
+        }
 
         instance = null;
         timerHandler.removeCallbacksAndMessages(null);
@@ -3770,6 +3804,7 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
             Toast.makeText(this, getString(R.string.pan_zoom_mode_disabled), Toast.LENGTH_SHORT).show();
         }
         updateZoomButtonAppearance();
+        applyMenuTriggerVisibility();
 
         if (ExternalDisplayControlActivity.instance != null) {
             ExternalDisplayControlActivity.instance.toggleZoomMode(false);
@@ -3964,6 +3999,7 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
         // Always exit zoom mode if mouse mode has changed
         isPanZoomMode = false;
         updateZoomButtonAppearance();
+        applyMenuTriggerVisibility();
     }
 
     public String getAppName() {
@@ -4055,13 +4091,31 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
         }
     }
 
-    private void updateFloatingButtonVisibility(boolean show) {
-        floatingMenuButton.setVisibility(show ? View.VISIBLE : View.GONE);
+    /**
+     * Shows the way to open the stream menu that the preference asks for (the handle or the
+     * floating button), and hides both when something else covers for them: picture in picture,
+     * pan and zoom mode, or a gamepad (which opens the menu with Start) when the setting says so.
+     */
+    private void applyMenuTriggerVisibility() {
+        boolean suppressed = isHidingOverlays || isPanZoomMode
+                || (prefConfig.hideMenuTriggerWithGamepad && ControllerHandler.isGamepadAttached(this));
+
+        if (menuHandle != null) {
+            boolean show = prefConfig.enableBackMenu && prefConfig.enableMenuHandle && !suppressed;
+            menuHandle.setVisibility(show ? View.VISIBLE : View.GONE);
+        }
+
+        if (floatingMenuButton != null) {
+            boolean wanted = floatingButtonOverride != null ? floatingButtonOverride
+                    : prefConfig.enableBackMenu && prefConfig.enableFloatingButton;
+            floatingMenuButton.setVisibility(wanted && !suppressed ? View.VISIBLE : View.GONE);
+        }
     }
 
     public void toggleFloatingButtonVisibility() {
         if (floatingMenuButton != null) {
-            updateFloatingButtonVisibility(floatingMenuButton.getVisibility() == View.GONE);
+            floatingButtonOverride = floatingMenuButton.getVisibility() == View.GONE;
+            applyMenuTriggerVisibility();
         }
     }
 

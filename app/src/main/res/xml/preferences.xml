@@ -560,6 +560,22 @@
         android:title="@string/category_ui_settings"
         app:initialExpandedChildrenCount="3"
         app:iconSpaceReserved="false">
+        <com.limelight.preferences.InlineListPreference
+            android:defaultValue="system"
+            android:entries="@array/theme_mode_names"
+            android:entryValues="@array/theme_mode_values"
+            android:key="list_theme_mode"
+            android:summary="@string/summary_list_theme_mode"
+            android:title="@string/title_list_theme_mode"
+            app:iconSpaceReserved="false" />
+        <com.limelight.preferences.InlineListPreference
+            android:defaultValue="auto"
+            android:entries="@array/interface_mode_names"
+            android:entryValues="@array/interface_mode_values"
+            android:key="list_interface_mode"
+            android:summary="@string/summary_list_interface_mode"
+            android:title="@string/title_list_interface_mode"
+            app:iconSpaceReserved="false" />
         <CheckBoxPreference
             android:defaultValue="false"
             android:key="checkbox_resume_without_confirm"
@@ -572,12 +588,21 @@
             android:summary="@string/summary_quit_dialog"
             android:title="@string/title_quit_dialog"
             app:iconSpaceReserved="false" />
+        <com.limelight.preferences.InlineListPreference
+            android:dependency="checkbox_enable_quit_dialog"
+            android:defaultValue="@string/default_menu_trigger"
+            android:entries="@array/menu_trigger_names"
+            android:entryValues="@array/menu_trigger_values"
+            android:key="list_menu_trigger"
+            android:summary="@string/summary_list_menu_trigger"
+            android:title="@string/title_list_menu_trigger"
+            app:iconSpaceReserved="false" />
         <CheckBoxPreference
             android:dependency="checkbox_enable_quit_dialog"
-            android:defaultValue="false"
-            android:key="checkbox_enable_floating_button"
-            android:summary="@string/summary_floating_button"
-            android:title="@string/title_floating_button"
+            android:defaultValue="true"
+            android:key="checkbox_hide_menu_trigger_when_gamepad"
+            android:summary="@string/summary_checkbox_hide_menu_trigger_when_gamepad"
+            android:title="@string/title_checkbox_hide_menu_trigger_when_gamepad"
             app:iconSpaceReserved="false" />
         <CheckBoxPreference
             android:key="checkbox_full_screen"

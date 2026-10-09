@@ -2,10 +2,11 @@
 <resources>
 
     <!--
-        Base application theme: Material 3 dark on every API level, with Ariane's
-        colour roles. values-v29 adds the API 29+ window tweaks on top of it.
+        Base application theme: Material 3 light or dark (follows the night mode the app
+        sets from the Theme preference), with Ariane's colour roles. values-v29 adds the
+        API 29+ window tweaks on top of it. The stream pins itself to night mode in Java.
     -->
-    <style name="Base.AppTheme" parent="Theme.Material3.Dark.NoActionBar">
+    <style name="Base.AppTheme" parent="Theme.Material3.DayNight.NoActionBar">
         <item name="colorPrimary">@color/ariane_primary</item>
         <item name="colorOnPrimary">@color/ariane_on_primary</item>
         <item name="colorPrimaryContainer">@color/ariane_primary_container</item>
@@ -48,6 +49,8 @@
         <item name="android:statusBarColor">@color/ariane_background</item>
         <item name="android:navigationBarColor">@color/ariane_background</item>
         <item name="android:windowBackground">@color/ariane_background</item>
+        <item name="android:windowLightStatusBar">@bool/ariane_light_system_bars</item>
+        <item name="android:windowLightNavigationBar">@bool/ariane_light_system_bars</item>
     </style>
 
     <style name="StreamBaseTheme" parent="AppBaseTheme">
@@ -91,6 +94,16 @@
         <item name="android:windowAnimationStyle">@style/Ariane.SidePanelAnimation</item>
     </style>
 
+    <!-- Same panel rising from the bottom, for the long-press menu on a phone -->
+    <style name="Ariane.BottomSheet" parent="Ariane.SidePanel">
+        <item name="android:windowAnimationStyle">@style/Ariane.BottomSheetAnimation</item>
+    </style>
+
+    <style name="Ariane.BottomSheetAnimation" parent="@android:style/Animation">
+        <item name="android:windowEnterAnimation">@anim/bottom_sheet_in</item>
+        <item name="android:windowExitAnimation">@anim/bottom_sheet_out</item>
+    </style>
+
     <style name="Ariane.SidePanelAnimation" parent="@android:style/Animation">
         <item name="android:windowEnterAnimation">@anim/side_panel_in</item>
         <item name="android:windowExitAnimation">@anim/side_panel_out</item>
@@ -121,13 +134,14 @@
         <attr name="aperture_middle_color" format="color" />
     </declare-styleable>
 
-    <!-- Platform alert dialogs: rounded card in the app's colours, TV-visible buttons -->
-    <style name="Ariane.AlertDialog" parent="@android:style/Theme.Material.Dialog.Alert">
+    <!-- Platform alert dialogs: rounded card in the app's colours, TV-visible buttons.
+         The light base is here; values-night/styles.xml swaps in the dark one. -->
+    <style name="Ariane.AlertDialog" parent="@android:style/Theme.Material.Light.Dialog.Alert">
         <item name="android:windowBackground">@drawable/dialog_bg</item>
         <item name="android:colorBackground">@color/ariane_surface_container_high</item>
         <item name="android:colorAccent">@color/ariane_primary</item>
         <item name="android:colorControlActivated">@color/ariane_primary</item>
-        <item name="android:colorControlHighlight">#3D9CCAFF</item>
+        <item name="android:colorControlHighlight">@color/ariane_dialog_highlight</item>
         <item name="android:textColorPrimary">@color/ariane_on_surface</item>
         <item name="android:textColorSecondary">@color/ariane_on_surface_variant</item>
         <item name="android:textColorAlertDialogListItem">@color/ariane_on_surface</item>

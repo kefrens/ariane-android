@@ -31,6 +31,7 @@ import com.limelight.utils.CacheHelper;
 import com.limelight.utils.Dialog;
 import com.limelight.utils.ServerHelper;
 import com.limelight.utils.ShortcutHelper;
+import com.limelight.utils.UiClass;
 import com.limelight.utils.SpinnerDialog;
 import com.limelight.utils.UiHelper;
 
@@ -70,6 +71,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import org.xmlpull.v1.XmlPullParserException;
 
 public class AppView extends AppCompatActivity implements AdapterFragmentCallbacks {
+    private int currentLayoutId;
     private AppGridAdapter appGridAdapter;
     private AbsListView appListView;
     private Drawable currentBackdrop;
@@ -186,9 +188,21 @@ public class AppView extends AppCompatActivity implements AdapterFragmentCallbac
         }
     };
 
+    // Phones get a touch layout. TVs and tablets keep the card layout
+    private int layoutForDevice() {
+        return UiClass.layoutFor(this, R.layout.activity_app_view,
+                R.layout.activity_app_view_phone, R.layout.activity_app_view);
+    }
+
     @Override
     public void onConfigurationChanged(Configuration newConfig) {
         super.onConfigurationChanged(newConfig);
+
+        // The window moved to another class of device (a fold, split screen): lay out again
+        if (currentLayoutId != 0 && layoutForDevice() != currentLayoutId) {
+            recreate();
+            return;
+        }
 
         this.prefConfig = PreferenceConfiguration.readPreferences(this);
 
@@ -322,7 +336,8 @@ public class AppView extends AppCompatActivity implements AdapterFragmentCallbac
 
         UiHelper.setLocale(this);
 
-        setContentView(R.layout.activity_app_view);
+        currentLayoutId = layoutForDevice();
+        setContentView(currentLayoutId);
         AmbientBackgroundDrawable.install(this);
 
         // Allow floating expanded PiP overlays while browsing apps
