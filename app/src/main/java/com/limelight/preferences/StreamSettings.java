@@ -155,13 +155,33 @@ public class StreamSettings extends AppCompatActivity {
         reloadSettings();
     }
 
-    // Phones get the drill-down layout. TVs and tablets keep the two-pane one, which the
-    // w720dp resource qualifier narrows down to a plain list on small windows.
+    // Below this width the two-pane layout squeezes the options too much, as on a tablet held
+    // upright, so the window gets the drill-down layout that phones use
+    static final int TWO_PANE_MIN_WIDTH_DP = 900;
+
+    // Phones, and windows too narrow for two panes, get the drill-down layout. TVs and wide
+    // tablet windows keep the two-pane one.
     private int layoutForDevice() {
-        return UiClass.layoutFor(UiClass.of(this),
+        UiClass uiClass = UiClass.of(this);
+        boolean narrow = getResources().getConfiguration().screenWidthDp < TWO_PANE_MIN_WIDTH_DP;
+        return UiClass.layoutFor(uiClass,
                 R.layout.activity_stream_settings,
                 R.layout.activity_stream_settings_phone,
-                R.layout.activity_stream_settings);
+                narrow ? R.layout.activity_stream_settings_phone : R.layout.activity_stream_settings);
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+
+        // onAttachedToWindow() loads the settings, but Android does not call it again when it
+        // relaunches the activity into a window it kept, as when the window changes size. Post
+        // so that on a normal start it has already run and this does nothing.
+        getWindow().getDecorView().post(() -> {
+            if (prefsFragment == null && !isFinishing() && !isDestroyed()) {
+                reloadSettings();
+            }
+        });
     }
 
     @Override

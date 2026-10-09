@@ -169,4 +169,22 @@ public class PhoneSettingsTest {
         assertTrue(shown(R.id.settingsDetailPane));
         assertEquals(name, ((TextView) activity.findViewById(R.id.settingsTitle)).getText().toString());
     }
+
+    private boolean hasDrillDown(String qualifiers) {
+        StreamSettings opened = Robolectric.buildActivity(StreamSettings.class).setup().get();
+        ShadowLooper.idleMainLooper();
+        return opened.findViewById(R.id.settingsListPane) != null;
+    }
+
+    @Test
+    @Config(qualifiers = "w800dp-h1280dp-port")
+    public void aTabletHeldUprightUsesTheDrillDown() {
+        assertTrue("two panes would squeeze the options on 800dp", hasDrillDown("portrait"));
+    }
+
+    @Test
+    @Config(qualifiers = "w1280dp-h800dp-land")
+    public void aTabletOnItsSideKeepsTwoPanes() {
+        assertFalse(hasDrillDown("landscape"));
+    }
 }
