@@ -1,10 +1,14 @@
 package com.limelight.utils;
 
+import android.app.Activity;
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.content.res.Configuration;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.AppCompatDelegate;
+import androidx.core.view.WindowCompat;
+import androidx.core.view.WindowInsetsControllerCompat;
 import androidx.preference.PreferenceManager;
 
 /**
@@ -37,6 +41,23 @@ public final class ThemeMode {
         }
         // TVs rarely report a night mode, and the TV design is made for dark
         return television ? AppCompatDelegate.MODE_NIGHT_YES : AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM;
+    }
+
+    /** Light screens want dark status and navigation bar icons, dark screens want light ones. */
+    static boolean useDarkSystemBarIcons(int uiMode) {
+        return (uiMode & Configuration.UI_MODE_NIGHT_MASK) != Configuration.UI_MODE_NIGHT_YES;
+    }
+
+    /**
+     * Sets the status and navigation bar icons to suit the screen's theme. The theme alone
+     * leaves them white on a light screen on some Android versions.
+     */
+    public static void applySystemBarIcons(Activity activity) {
+        boolean dark = useDarkSystemBarIcons(activity.getResources().getConfiguration().uiMode);
+        WindowInsetsControllerCompat controller = WindowCompat.getInsetsController(
+                activity.getWindow(), activity.getWindow().getDecorView());
+        controller.setAppearanceLightStatusBars(dark);
+        controller.setAppearanceLightNavigationBars(dark);
     }
 
     /** Keeps one screen dark regardless of the setting. Call before super.onCreate(). */

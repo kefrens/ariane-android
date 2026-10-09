@@ -1,7 +1,9 @@
 package com.limelight;
 
+import android.app.Activity;
 import android.app.Application;
 import android.content.SharedPreferences;
+import android.os.Bundle;
 import android.widget.Toast;
 
 import androidx.preference.PreferenceManager;
@@ -9,6 +11,7 @@ import androidx.preference.PreferenceManager;
 import com.google.android.material.color.DynamicColors;
 import com.google.android.material.color.DynamicColorsOptions;
 import com.limelight.profiles.ProfilesManager;
+import com.limelight.utils.ExternalDisplayControlActivity;
 import com.limelight.utils.ThemeMode;
 import com.limelight.utils.UiClass;
 
@@ -29,6 +32,35 @@ public class ArtemisApplication extends Application {
             }
         };
         prefs.registerOnSharedPreferenceChangeListener(themePrefListener);
+
+        // Status and navigation bar icons that suit the theme of each screen. The stream and
+        // the external display controls are always dark, so they keep their own.
+        registerActivityLifecycleCallbacks(new ActivityLifecycleCallbacks() {
+            @Override
+            public void onActivityStarted(Activity activity) {
+                if (!(activity instanceof Game) && !(activity instanceof ExternalDisplayControlActivity)) {
+                    ThemeMode.applySystemBarIcons(activity);
+                }
+            }
+
+            @Override
+            public void onActivityCreated(Activity activity, Bundle savedInstanceState) {}
+
+            @Override
+            public void onActivityResumed(Activity activity) {}
+
+            @Override
+            public void onActivityPaused(Activity activity) {}
+
+            @Override
+            public void onActivityStopped(Activity activity) {}
+
+            @Override
+            public void onActivitySaveInstanceState(Activity activity, Bundle outState) {}
+
+            @Override
+            public void onActivityDestroyed(Activity activity) {}
+        });
 
         // On Android 12+ take the app colours from the wallpaper. The stream activity
         // keeps its own fixed overlay colours.
