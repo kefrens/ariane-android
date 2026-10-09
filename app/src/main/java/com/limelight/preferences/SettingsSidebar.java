@@ -206,6 +206,17 @@ final class SettingsSidebar {
         }
     }
 
+    /** Position of the category on show in the category list, or -1 if there is none. */
+    int selectedIndex() {
+        return activeItem == null ? -1 : container.indexOfChild(activeItem);
+    }
+
+    void selectIndex(int index) {
+        if (index >= 0 && index < container.getChildCount()) {
+            select(container.getChildAt(index));
+        }
+    }
+
     private void select(View item) {
         // Picking a category leaves the search
         if (searchField != null && searchField.length() > 0) {

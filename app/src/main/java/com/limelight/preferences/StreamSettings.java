@@ -27,6 +27,8 @@ import androidx.preference.PreferenceCategory;
 import androidx.preference.PreferenceFragmentCompat;
 import androidx.preference.PreferenceManager;
 import androidx.preference.PreferenceScreen;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 import android.text.InputFilter;
 import android.text.InputType;
@@ -71,6 +73,13 @@ import java.util.Map;
 
 public class StreamSettings extends AppCompatActivity {
     private PreferenceConfiguration previousPrefs;
+
+    private static final String STATE_CATEGORY_INDEX = "settings_category_index";
+    private static final String STATE_SCROLL_POSITION = "settings_scroll_position";
+    private static final String STATE_SCROLL_OFFSET = "settings_scroll_offset";
+    private int restoredCategoryIndex = -1;
+    private int restoredScrollPosition = -1;
+    private int restoredScrollOffset;
     private int previousDisplayPixelCount;
 
     private SettingsFragment prefsFragment;
@@ -99,6 +108,11 @@ public class StreamSettings extends AppCompatActivity {
         // Don't restore the old fragment (a theme change recreates this activity): it has no
         // empty constructor, and reloadSettings() builds a fresh one anyway
         super.onCreate(null);
+        if (savedInstanceState != null) {
+            restoredCategoryIndex = savedInstanceState.getInt(STATE_CATEGORY_INDEX, -1);
+            restoredScrollPosition = savedInstanceState.getInt(STATE_SCROLL_POSITION, -1);
+            restoredScrollOffset = savedInstanceState.getInt(STATE_SCROLL_OFFSET, 0);
+        }
 
         previousPrefs = PreferenceConfiguration.readPreferences(this);
 
@@ -180,6 +194,43 @@ public class StreamSettings extends AppCompatActivity {
     void onPreferencesShown(SettingsFragment fragment) {
         if (sidebar != null) {
             sidebar.bind(fragment);
+        }
+        restoreListPosition(fragment);
+    }
+
+    // A theme change recreates this screen. Put the list back where it was, so the option
+    // that was just changed is still under the finger.
+    private void restoreListPosition(SettingsFragment fragment) {
+        if (restoredScrollPosition < 0) {
+            return;
+        }
+        if (sidebar != null) {
+            sidebar.selectIndex(restoredCategoryIndex);
+        }
+        RecyclerView list = fragment.getListView();
+        if (list != null && list.getLayoutManager() instanceof LinearLayoutManager) {
+            ((LinearLayoutManager) list.getLayoutManager())
+                    .scrollToPositionWithOffset(restoredScrollPosition, restoredScrollOffset);
+        }
+        restoredScrollPosition = -1;
+    }
+
+    @Override
+    protected void onSaveInstanceState(@NonNull Bundle outState) {
+        super.onSaveInstanceState(outState);
+        if (sidebar != null) {
+            outState.putInt(STATE_CATEGORY_INDEX, sidebar.selectedIndex());
+        }
+        RecyclerView list = prefsFragment != null ? prefsFragment.getListView() : null;
+        if (list != null && list.getLayoutManager() instanceof LinearLayoutManager) {
+            LinearLayoutManager layoutManager = (LinearLayoutManager) list.getLayoutManager();
+            int position = layoutManager.findFirstVisibleItemPosition();
+            if (position >= 0) {
+                View first = layoutManager.findViewByPosition(position);
+                outState.putInt(STATE_SCROLL_POSITION, position);
+                outState.putInt(STATE_SCROLL_OFFSET,
+                        first != null ? first.getTop() - list.getPaddingTop() : 0);
+            }
         }
     }
 
