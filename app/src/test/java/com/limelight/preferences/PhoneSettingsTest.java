@@ -130,6 +130,32 @@ public class PhoneSettingsTest {
         assertFalse(activity.isFinishing());
     }
 
+    private int headerLayoutOf(String categoryKey) {
+        androidx.preference.PreferenceFragmentCompat fragment = (androidx.preference.PreferenceFragmentCompat)
+                activity.getSupportFragmentManager().findFragmentById(R.id.stream_settings);
+        assertNotNull(fragment);
+        return fragment.getPreferenceScreen().findPreference(categoryKey).getLayoutResource();
+    }
+
+    @Test
+    public void aCategoryDoesNotRepeatItsNameAboveItsOptions() {
+        categories().getChildAt(0).performClick();
+
+        assertEquals("the title bar already says Video",
+                R.layout.settings_category_hidden, headerLayoutOf("category_video_settings"));
+    }
+
+    @Test
+    public void searchResultsKeepTheCategoryHeaders() {
+        categories().getChildAt(0).performClick();
+        int hidden = headerLayoutOf("category_video_settings");
+
+        ((EditText) activity.findViewById(R.id.settingsSearch)).setText("bitrate");
+
+        assertTrue("headers show where each match lives",
+                headerLayoutOf("category_video_settings") != hidden);
+    }
+
     @Test
     public void clearingASearchReturnsToTheCategoryYouWereIn() {
         EditText search = activity.findViewById(R.id.settingsSearch);

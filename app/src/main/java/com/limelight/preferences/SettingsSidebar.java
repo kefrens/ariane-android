@@ -9,6 +9,7 @@ import android.view.View;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
+import android.widget.HorizontalScrollView;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -48,6 +49,10 @@ final class SettingsSidebar {
     private final List<PreferenceCategory> jumpSections = new ArrayList<>();
     private RecyclerView boundList;
     private final List<PreferenceCategory> categories = new ArrayList<>();
+    // The header layout each category came with, so it can be put back after hiding it
+    private final Map<PreferenceCategory, Integer> headerLayouts = new HashMap<>();
+    // Section chip last scrolled into view, so the row isn't nudged on every scroll event
+    private int revealedSection = -1;
     // Visibility of each option before a search, so clearing it restores the options
     // the settings screen hides on purpose (unsupported on this device, for example)
     private final Map<Preference, Boolean> visibleBeforeSearch = new HashMap<>();
@@ -156,6 +161,7 @@ final class SettingsSidebar {
         this.fragment = fragment;
         container.removeAllViews();
         categories.clear();
+        headerLayouts.clear();
         visibleBeforeSearch.clear();
         activeItem = null;
         if (searchField != null && searchField.length() > 0) {
@@ -189,6 +195,7 @@ final class SettingsSidebar {
             }
 
             PreferenceCategory category = (PreferenceCategory) pref;
+            headerLayouts.put(category, category.getLayoutResource());
             // The options pane has room for everything, so skip the "show more" rows
             expandAll(category);
 
@@ -246,6 +253,20 @@ final class SettingsSidebar {
         ((ImageView) row.findViewById(R.id.settingsRowIcon)).setImageDrawable(
                 SettingsSections.tinted(context, iconFor(category.getKey()), color));
         return row;
+    }
+
+    // Phone: the title bar names the category on show, so its own header would say it twice.
+    // Search results keep the headers, which show where each match lives.
+    private void showCategoryHeaders(boolean show) {
+        if (!drillDown) {
+            return;
+        }
+        for (Map.Entry<PreferenceCategory, Integer> entry : headerLayouts.entrySet()) {
+            int wanted = show ? entry.getValue() : R.layout.settings_category_hidden;
+            if (entry.getKey().getLayoutResource() != wanted) {
+                entry.getKey().setLayoutResource(wanted);
+            }
+        }
     }
 
     // Phone: the list of categories fills the screen
@@ -368,6 +389,7 @@ final class SettingsSidebar {
         }
         showSections((PreferenceCategory) item.getTag());
         if (drillDown) {
+            showCategoryHeaders(false);
             showDetail(((PreferenceCategory) item.getTag()).getTitle());
             hideKeyboard();
         }
@@ -384,6 +406,7 @@ final class SettingsSidebar {
         }
         jumpContainer.removeAllViews();
         jumpSections.clear();
+        revealedSection = -1;
         if (category != null) {
             jumpSections.addAll(SettingsSections.sectionsOf(category));
         }
@@ -469,6 +492,26 @@ final class SettingsSidebar {
         for (int i = 0; i < jumpContainer.getChildCount(); i++) {
             jumpContainer.getChildAt(i).setActivated(i == current);
         }
+        if (current != revealedSection && current < jumpContainer.getChildCount()) {
+            revealedSection = current;
+            revealChip(jumpContainer.getChildAt(current));
+        }
+    }
+
+    // Phone: slides the row of section chips so the highlighted one is fully on screen
+    private void revealChip(View chip) {
+        if (!(jumpContainer.getParent() instanceof HorizontalScrollView)) {
+            return;
+        }
+        HorizontalScrollView row = (HorizontalScrollView) jumpContainer.getParent();
+        int margin = row.getPaddingLeft();
+        int visibleLeft = row.getScrollX();
+        int visibleRight = visibleLeft + row.getWidth() - row.getPaddingRight();
+        if (chip.getLeft() - margin < visibleLeft) {
+            row.smoothScrollTo(chip.getLeft() - margin, 0);
+        } else if (chip.getRight() + margin > visibleRight) {
+            row.smoothScrollTo(chip.getRight() + margin - (row.getWidth() - row.getPaddingRight()), 0);
+        }
     }
 
     private void search(String query) {
@@ -513,6 +556,7 @@ final class SettingsSidebar {
             searchEmpty.setVisibility(anyMatch ? View.GONE : View.VISIBLE);
         }
         if (drillDown) {
+            showCategoryHeaders(true);
             showDetail(container.getContext().getString(R.string.settings_search_results));
         }
         if (fragment != null && fragment.getListView() != null) {
