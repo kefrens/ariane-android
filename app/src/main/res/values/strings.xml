@@ -129,6 +129,8 @@
     <string name="lost_connection">Lost connection to PC</string>
     <string name="title_details">Details</string>
     <string name="help">Help</string>
+    <!-- How the stream menu opens by default: a handle, or nothing on screen on TV (values-television) -->
+    <string name="default_menu_trigger" translatable="false">handle</string>
     <string name="settings">Settings</string>
     <string name="settings_profile_line">Profile: %1$s</string>
     <string name="home_hosts">Hosts</string>
@@ -509,8 +511,19 @@
     <string name="title_virtual_trackpad_settings">Virtual trackpad</string>
     <string name="title_quit_dialog">Back Menu</string>
     <string name="summary_quit_dialog">When enabled, clicking the physical back button on the streaming interface will show related options!\nSoft keyboard, performance information, touch mode switching, send special keys</string>
-    <string name="title_floating_button">Floating Button</string>
-    <string name="summary_floating_button">Enable floating button</string>
+    <string name="title_list_menu_trigger">Stream menu</string>
+    <string name="summary_list_menu_trigger">How to open the menu during a stream on a touchscreen. The handle is a small tab on the right edge: tap it to open the menu, drag it to move it.</string>
+    <string name="menu_trigger_handle">Visible handle</string>
+    <string name="menu_trigger_floating">Floating button</string>
+    <string name="menu_trigger_none">Nothing on screen</string>
+    <string name="title_checkbox_hide_menu_trigger_when_gamepad">Hide while a gamepad is connected</string>
+    <string name="summary_checkbox_hide_menu_trigger_when_gamepad">With a gamepad, open the menu by tapping Start and then holding it. Needs Back Menu.</string>
+    <string name="title_list_interface_mode">Interface</string>
+    <string name="summary_list_interface_mode">Automatic picks the layout for your device. Choose TV or Touch to override it.</string>
+    <string name="interface_mode_auto">Automatic</string>
+    <string name="interface_mode_tv">TV</string>
+    <string name="interface_mode_touch">Touch</string>
+    <string name="menu_handle_description">Open the stream menu</string>
     <string name="dialog_custom_resolution">Set the resolution and exit the settings page to take effect!</string>
     <string name="summary_custom_resolution">Add a custom resolution, separated by x, strange resolutions may not work.\nFor example: 1920x1080\nIf it is a non-native resolution, it may not fill the notch area by default. If the aspect ratio is the same, you can manually set to stretch the screen to fill the full screen</string>
     <string name="title_custom_resolution">Custom Resolution</string>

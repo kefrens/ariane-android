@@ -107,4 +107,39 @@ public class PreferenceMigratorTest {
         assertEquals(720, config.height);
         assertEquals(30f, config.fps, 0f);
     }
+
+    @Test
+    public void floatingButtonThatWasOnBecomesTheFloatingButtonChoice() {
+        prefs.edit().putBoolean("checkbox_enable_floating_button", true).commit();
+
+        PreferenceMigrator.migrate(ctx, prefs);
+
+        assertEquals("floating", prefs.getString("list_menu_trigger", null));
+    }
+
+    @Test
+    public void floatingButtonThatWasOffKeepsNothingOnScreen() {
+        prefs.edit().putBoolean("checkbox_enable_floating_button", false).commit();
+
+        PreferenceMigrator.migrate(ctx, prefs);
+
+        assertEquals("none", prefs.getString("list_menu_trigger", null));
+    }
+
+    @Test
+    public void aNewInstallIsLeftToItsDefault() {
+        PreferenceMigrator.migrate(ctx, prefs);
+
+        assertFalse(prefs.contains("list_menu_trigger"));
+    }
+
+    @Test
+    public void aChoiceAlreadyMadeIsNotOverwritten() {
+        prefs.edit().putBoolean("checkbox_enable_floating_button", true)
+                .putString("list_menu_trigger", "handle").commit();
+
+        PreferenceMigrator.migrate(ctx, prefs);
+
+        assertEquals("handle", prefs.getString("list_menu_trigger", null));
+    }
 }

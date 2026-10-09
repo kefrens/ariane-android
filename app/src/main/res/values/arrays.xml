@@ -53,6 +53,28 @@
         <item>51</item>
         <item>71</item>
     </string-array>
+    <string-array name="menu_trigger_names">
+        <item>@string/menu_trigger_handle</item>
+        <item>@string/menu_trigger_floating</item>
+        <item>@string/menu_trigger_none</item>
+    </string-array>
+    <string-array name="menu_trigger_values" translatable="false">
+        <item>handle</item>
+        <item>floating</item>
+        <item>none</item>
+    </string-array>
+
+    <string-array name="interface_mode_names">
+        <item>@string/interface_mode_auto</item>
+        <item>@string/interface_mode_tv</item>
+        <item>@string/interface_mode_touch</item>
+    </string-array>
+    <string-array name="interface_mode_values" translatable="false">
+        <item>auto</item>
+        <item>tv</item>
+        <item>touch</item>
+    </string-array>
+
     <string-array name="theme_mode_names">
         <item>@string/theme_mode_system</item>
         <item>@string/theme_mode_light</item>

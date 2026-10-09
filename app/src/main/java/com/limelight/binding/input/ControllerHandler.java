@@ -229,6 +229,28 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
         return hasGameController;
     }
 
+    /**
+     * True if a real gamepad (joystick axes or gamepad buttons) is plugged in or paired right
+     * now. Unlike hasController(), it follows gamepads coming and going.
+     */
+    public static boolean isGamepadAttached(Context context) {
+        InputManager inputManager = (InputManager) context.getSystemService(Context.INPUT_SERVICE);
+        if (inputManager == null) {
+            return false;
+        }
+        for (int id : inputManager.getInputDeviceIds()) {
+            InputDevice device = inputManager.getInputDevice(id);
+            if (device != null && !device.isVirtual() && isRealGamepad(device)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean isRealGamepad(InputDevice device) {
+        return hasJoystickAxes(device) || hasGamepadButtons(device);
+    }
+
     @Override
     public void onInputDeviceAdded(int deviceId) {
         // Nothing happening here yet

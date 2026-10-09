@@ -102,26 +102,79 @@ public class PhoneHomeTest {
                 activity.findViewById(R.id.appSearchButton)).getText().length() == 0);
     }
 
-    private static boolean floatingButtonOn() {
+    private static PreferenceConfiguration config() {
         Context context = ApplicationProvider.getApplicationContext();
-        return PreferenceConfiguration.readPreferences(context).enableFloatingButton;
+        return PreferenceConfiguration.readPreferences(context);
     }
 
     @Test
     @Config(qualifiers = "w360dp-h740dp-port")
-    public void theFloatingMenuButtonIsOnByDefaultOnAPhone() {
-        assertTrue(floatingButtonOn());
+    public void aPhoneOpensTheStreamMenuWithTheHandleByDefault() {
+        assertEquals("handle", config().menuTrigger);
+        assertTrue(config().enableMenuHandle);
+        assertFalse(config().enableFloatingButton);
     }
 
     @Test
     @Config(qualifiers = "w1280dp-h800dp-land")
-    public void theFloatingMenuButtonStaysOffOnATablet() {
-        assertFalse(floatingButtonOn());
+    public void aTabletUsesTheHandleToo() {
+        assertTrue(config().enableMenuHandle);
     }
 
     @Test
     @Config(qualifiers = "w960dp-h540dp-land-television")
-    public void theFloatingMenuButtonStaysOffOnATv() {
-        assertFalse(floatingButtonOn());
+    public void aTvShowsNothingOnScreen() {
+        assertEquals("none", config().menuTrigger);
+        assertFalse(config().enableMenuHandle);
+        assertFalse(config().enableFloatingButton);
+    }
+
+    @Test
+    @Config(qualifiers = "w360dp-h740dp-port")
+    public void theChoiceInSettingsDecidesWhichOneShows() {
+        Context context = ApplicationProvider.getApplicationContext();
+        android.content.SharedPreferences prefs = androidx.preference.PreferenceManager.getDefaultSharedPreferences(context);
+
+        prefs.edit().putString("list_menu_trigger", "floating").commit();
+        assertTrue(config().enableFloatingButton);
+        assertFalse(config().enableMenuHandle);
+
+        prefs.edit().putString("list_menu_trigger", "none").commit();
+        assertFalse(config().enableFloatingButton);
+        assertFalse(config().enableMenuHandle);
+    }
+
+    @Test
+    @Config(qualifiers = "w360dp-h740dp-port")
+    public void theHandleHidesWithAGamepadUnlessTurnedOff() {
+        assertTrue(config().hideMenuTriggerWithGamepad);
+
+        Context context = ApplicationProvider.getApplicationContext();
+        androidx.preference.PreferenceManager.getDefaultSharedPreferences(context).edit()
+                .putBoolean("checkbox_hide_menu_trigger_when_gamepad", false).commit();
+        assertFalse(config().hideMenuTriggerWithGamepad);
+    }
+
+    @Test
+    @Config(qualifiers = "w360dp-h740dp-port")
+    public void noGamepadIsAttachedByDefault() {
+        assertFalse(com.limelight.binding.input.ControllerHandler.isGamepadAttached(
+                ApplicationProvider.getApplicationContext()));
+    }
+
+    @Test
+    @Config(qualifiers = "w360dp-h740dp-port")
+    public void anAttachedGamepadIsFound() {
+        Context context = ApplicationProvider.getApplicationContext();
+        android.hardware.input.InputManager manager = (android.hardware.input.InputManager)
+                context.getSystemService(Context.INPUT_SERVICE);
+        android.view.InputDevice pad = org.mockito.Mockito.mock(android.view.InputDevice.class);
+        org.mockito.Mockito.when(pad.getId()).thenReturn(42);
+        org.mockito.Mockito.when(pad.isVirtual()).thenReturn(false);
+        org.mockito.Mockito.when(pad.getSources()).thenReturn(android.view.InputDevice.SOURCE_GAMEPAD);
+        Shadows.shadowOf(manager).addInputDevice(pad);
+
+        // A device that only has gamepad buttons counts, a plain keyboard would not
+        assertTrue(com.limelight.binding.input.ControllerHandler.isGamepadAttached(context));
     }
 }
