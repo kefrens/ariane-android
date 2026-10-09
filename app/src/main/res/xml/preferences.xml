@@ -560,6 +560,14 @@
         android:title="@string/category_ui_settings"
         app:initialExpandedChildrenCount="3"
         app:iconSpaceReserved="false">
+        <com.limelight.preferences.InlineListPreference
+            android:defaultValue="system"
+            android:entries="@array/theme_mode_names"
+            android:entryValues="@array/theme_mode_values"
+            android:key="list_theme_mode"
+            android:summary="@string/summary_list_theme_mode"
+            android:title="@string/title_list_theme_mode"
+            app:iconSpaceReserved="false" />
         <CheckBoxPreference
             android:defaultValue="false"
             android:key="checkbox_resume_without_confirm"

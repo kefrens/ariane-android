@@ -30,10 +30,10 @@ public class LayoutInflationTest {
     /** Inflates every layout with the configuration the calling test runs under. */
     static void inflateAllLayouts() throws IllegalAccessException {
         Context base = ApplicationProvider.getApplicationContext();
-        // Material Components widgets (e.g. ExtendedFloatingActionButton) require a
-        // MaterialComponents theme, which also satisfies AppCompat widgets
+        // The app's own theme: it is Material 3 (needed by e.g. ExtendedFloatingActionButton and
+        // the ?attr/colorOn* references) and follows the night qualifier the test runs under
         Context context = new androidx.appcompat.view.ContextThemeWrapper(base,
-                com.google.android.material.R.style.Theme_MaterialComponents);
+                com.limelight.R.style.AppTheme);
         for (int layoutId : getAllLayoutResourceIds()) {
             try {
                 LayoutInflater.from(context).inflate(layoutId, null);

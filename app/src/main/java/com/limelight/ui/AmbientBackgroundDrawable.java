@@ -44,8 +44,8 @@ public class AmbientBackgroundDrawable extends Drawable implements Runnable {
 
     public AmbientBackgroundDrawable(Context context) {
         baseColor = context.getResources().getColor(R.color.ariane_background);
-        coolColor = 0x9900497D;  // primary container at 60%
-        warmColor = 0x59743500;  // tertiary container at 35%
+        coolColor = context.getResources().getColor(R.color.ariane_glow_cool);  // primary container at 60%
+        warmColor = context.getResources().getColor(R.color.ariane_glow_warm);  // tertiary container at 35%
     }
 
     @Override

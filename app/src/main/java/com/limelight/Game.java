@@ -48,6 +48,7 @@ import com.limelight.ui.StreamContainer;
 import com.limelight.utils.Dialog;
 import com.limelight.utils.ExternalDisplayControlActivity;
 import com.limelight.utils.MouseModeOption;
+import com.limelight.utils.ThemeMode;
 import com.limelight.utils.PanZoomHandler;
 import com.limelight.utils.PerformanceDataTracker;
 import com.limelight.utils.ServerHelper;
@@ -367,6 +368,8 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
     @SuppressLint({"MissingInflatedId", "ClickableViewAccessibility"})
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        // The stream is dark whatever the Theme setting says
+        ThemeMode.pinDark(this);
         super.onCreate(savedInstanceState);
 
         instance = this;

@@ -5,17 +5,17 @@
         <shape android:shape="rectangle">
             <gradient
                 android:angle="270"
-                android:startColor="#660F1419"
-                android:centerColor="#990F1419"
-                android:endColor="#F20F1419" />
+                android:startColor="@color/ariane_scrim_top"
+                android:centerColor="@color/ariane_scrim_mid"
+                android:endColor="@color/ariane_scrim_bottom" />
         </shape>
     </item>
     <item>
         <shape android:shape="rectangle">
             <gradient
                 android:angle="0"
-                android:startColor="#B30F1419"
-                android:endColor="#000F1419" />
+                android:startColor="@color/ariane_scrim_side_start"
+                android:endColor="@color/ariane_scrim_side_end" />
         </shape>
     </item>
 </layer-list>

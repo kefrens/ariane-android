@@ -90,7 +90,7 @@ public class LayoutContractTest {
     private static java.util.Map<String, View> inflateVariants(String layoutName) {
         Context base = ApplicationProvider.getApplicationContext();
         Context context = new androidx.appcompat.view.ContextThemeWrapper(base,
-                com.google.android.material.R.style.Theme_MaterialComponents);
+                com.limelight.R.style.AppTheme);
         Resources res = context.getResources();
         java.util.Map<String, View> views = new java.util.LinkedHashMap<>();
         for (String suffix : VARIANT_SUFFIXES) {

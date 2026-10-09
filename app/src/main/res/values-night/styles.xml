@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Dark platform dialogs; the light version and the shared items are in values/styles.xml -->
+    <style name="Ariane.AlertDialog" parent="@android:style/Theme.Material.Dialog.Alert">
+        <item name="android:windowBackground">@drawable/dialog_bg</item>
+        <item name="android:colorBackground">@color/ariane_surface_container_high</item>
+        <item name="android:colorAccent">@color/ariane_primary</item>
+        <item name="android:colorControlActivated">@color/ariane_primary</item>
+        <item name="android:colorControlHighlight">@color/ariane_dialog_highlight</item>
+        <item name="android:textColorPrimary">@color/ariane_on_surface</item>
+        <item name="android:textColorSecondary">@color/ariane_on_surface_variant</item>
+        <item name="android:textColorAlertDialogListItem">@color/ariane_on_surface</item>
+        <item name="android:buttonBarButtonStyle">@style/Ariane.DialogButton</item>
+        <item name="android:backgroundDimAmount">0.6</item>
+    </style>
+</resources>

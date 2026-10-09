@@ -47,4 +47,22 @@ public class LayoutInflationQualifiersTest {
     public void television() throws IllegalAccessException {
         LayoutInflationTest.inflateAllLayouts();
     }
+
+    @Test
+    @Config(qualifiers = "w360dp-h740dp-port-night")
+    public void phonePortraitNight() throws IllegalAccessException {
+        LayoutInflationTest.inflateAllLayouts();
+    }
+
+    @Test
+    @Config(qualifiers = "w1280dp-h800dp-land-night")
+    public void tabletLandscapeNight() throws IllegalAccessException {
+        LayoutInflationTest.inflateAllLayouts();
+    }
+
+    @Test
+    @Config(qualifiers = "w960dp-h540dp-land-television-night")
+    public void televisionNight() throws IllegalAccessException {
+        LayoutInflationTest.inflateAllLayouts();
+    }
 }
