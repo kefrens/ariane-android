@@ -96,7 +96,9 @@ public class StreamSettings extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
 //        setTheme(R.style.AppTheme);
-        super.onCreate(savedInstanceState);
+        // Don't restore the old fragment (a theme change recreates this activity): it has no
+        // empty constructor, and reloadSettings() builds a fresh one anyway
+        super.onCreate(null);
 
         previousPrefs = PreferenceConfiguration.readPreferences(this);
 

@@ -49,6 +49,8 @@
         <item name="android:statusBarColor">@color/ariane_background</item>
         <item name="android:navigationBarColor">@color/ariane_background</item>
         <item name="android:windowBackground">@color/ariane_background</item>
+        <item name="android:windowLightStatusBar">@bool/ariane_light_system_bars</item>
+        <item name="android:windowLightNavigationBar">@bool/ariane_light_system_bars</item>
     </style>
 
     <style name="StreamBaseTheme" parent="AppBaseTheme">

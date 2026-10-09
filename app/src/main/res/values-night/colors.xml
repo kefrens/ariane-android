@@ -43,6 +43,8 @@
     <!-- Glow behind the home screens: primary container at 60%, tertiary container at 35% -->
     <color name="ariane_glow_cool">#9900497D</color>
     <color name="ariane_glow_warm">#59743500</color>
+    <!-- Side panel for list choices -->
+    <color name="ariane_side_panel">#F21F2730</color>
     <!-- Settings panel, slightly see-through so the glow shows -->
     <color name="ariane_panel_overlay">#D9171D24</color>
     <!-- Fades the game-art backdrop into the background colour -->
