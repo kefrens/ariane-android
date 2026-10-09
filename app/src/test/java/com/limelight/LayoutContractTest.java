@@ -69,6 +69,16 @@ public class LayoutContractTest {
         check("activity_stream_settings", "stream_settings");
     }
 
+    @Test
+    public void phoneSettingsHasEverythingTheDrillDownNeeds() {
+        // The wide layout shares most of these ids, the phone one adds the two panes and the back button
+        check("activity_stream_settings_phone",
+                "stream_settings", "settingsCategories", "settingsSearch", "settingsSearchEmpty",
+                "settingsSections", "settingsProfile", "settingsListPane", "settingsDetailPane",
+                "settingsBack", "settingsTitle");
+        check("settings_category_row", "settingsRowIcon", "settingsRowTitle", "settingsRowSummary");
+    }
+
     private static void checkList(String layoutName) {
         for (java.util.Map.Entry<String, View> variant : inflateVariants(layoutName).entrySet()) {
             View list = variant.getValue().findViewById(idOf("fragmentView"));

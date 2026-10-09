@@ -1,11 +1,13 @@
 package com.limelight.preferences;
 
 import android.app.Activity;
+import android.content.Context;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.inputmethod.EditorInfo;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -33,6 +35,9 @@ import java.util.Map;
  * the preference categories, and the options pane shows only the selected one.
  * The search field above the categories shows matching options from every category.
  * A column of section icons next to the options jumps to a section of the category.
+ *
+ * On a phone the same logic drives a drill-down instead: the category list fills the screen,
+ * picking a category (or searching) shows its options, and the back button returns to the list.
  */
 final class SettingsSidebar {
     private final LinearLayout container;
@@ -49,12 +54,29 @@ final class SettingsSidebar {
     private PreferenceFragmentCompat fragment;
     private View activeItem;
 
+    // Phone drill-down: the category list and the options take turns on the screen.
+    // All null on the wide layouts, where both are always shown.
+    private final View listPane;
+    private final View detailPane;
+    private final View backButton;
+    private final TextView titleView;
+    private final boolean drillDown;
+
     private SettingsSidebar(LinearLayout container, EditText searchField, TextView searchEmpty,
-                            LinearLayout jumpContainer) {
+                            LinearLayout jumpContainer, View listPane, View detailPane,
+                            View backButton, TextView titleView) {
         this.container = container;
         this.searchField = searchField;
         this.searchEmpty = searchEmpty;
         this.jumpContainer = jumpContainer;
+        this.listPane = listPane;
+        this.detailPane = detailPane;
+        this.backButton = backButton;
+        this.titleView = titleView;
+        this.drillDown = listPane != null && detailPane != null;
+        if (backButton != null) {
+            backButton.setOnClickListener(v -> handleBack());
+        }
 
         // Moving up and down the sidebar switches category, like Google TV's settings.
         // Coming back from the options pane lands on the category on show, not on
@@ -98,13 +120,36 @@ final class SettingsSidebar {
         }
     }
 
-    /** Returns null when the layout has no sidebar (single-pane settings on phones). */
+    /** Returns null when the layout has no category list (the bare single-pane settings). */
     static SettingsSidebar attach(Activity activity) {
         LinearLayout container = activity.findViewById(R.id.settingsCategories);
         return container != null ? new SettingsSidebar(container,
                 activity.findViewById(R.id.settingsSearch),
                 activity.findViewById(R.id.settingsSearchEmpty),
-                activity.findViewById(R.id.settingsSections)) : null;
+                activity.findViewById(R.id.settingsSections),
+                activity.findViewById(R.id.settingsListPane),
+                activity.findViewById(R.id.settingsDetailPane),
+                activity.findViewById(R.id.settingsBack),
+                activity.findViewById(R.id.settingsTitle)) : null;
+    }
+
+    /**
+     * Steps back inside the drill-down: out of a search, then from a category to the list.
+     * Returns false when there is nowhere to step back to, so the screen should close.
+     */
+    boolean handleBack() {
+        if (!drillDown) {
+            return false;
+        }
+        if (searchField != null && searchField.length() > 0) {
+            searchField.setText("");
+            return true;
+        }
+        if (activeItem != null) {
+            showList();
+            return true;
+        }
+        return false;
     }
 
     void bind(PreferenceFragmentCompat fragment) {
@@ -147,19 +192,103 @@ final class SettingsSidebar {
             // The options pane has room for everything, so skip the "show more" rows
             expandAll(category);
 
-            TextView item = (TextView) inflater.inflate(R.layout.settings_category_item, container, false);
-            item.setText(category.getTitle());
-            item.setCompoundDrawablesRelativeWithIntrinsicBounds(iconFor(category.getKey()), 0, 0, 0);
+            View item;
+            if (drillDown) {
+                item = inflateCategoryRow(inflater, category);
+            } else {
+                TextView row = (TextView) inflater.inflate(R.layout.settings_category_item, container, false);
+                row.setText(category.getTitle());
+                row.setCompoundDrawablesRelativeWithIntrinsicBounds(iconFor(category.getKey()), 0, 0, 0);
+                item = row;
+            }
             item.setTag(category);
             item.setOnClickListener(this::select);
             container.addView(item);
             categories.add(category);
         }
 
-        if (container.getChildCount() > 0) {
+        if (drillDown) {
+            // Start on the list of categories
+            showList();
+        } else if (container.getChildCount() > 0) {
             View first = container.getChildAt(0);
             select(first);
             first.requestFocus();
+        }
+    }
+
+    // Phone row: coloured icon, the category's name, and the sections inside it
+    private View inflateCategoryRow(LayoutInflater inflater, PreferenceCategory category) {
+        Context context = container.getContext();
+        View row = inflater.inflate(R.layout.settings_category_row, container, false);
+        ((TextView) row.findViewById(R.id.settingsRowTitle)).setText(category.getTitle());
+
+        List<PreferenceCategory> sections = SettingsSections.sectionsOf(category);
+        StringBuilder names = new StringBuilder();
+        for (PreferenceCategory section : sections) {
+            if (names.length() > 0) {
+                names.append(" · ");
+            }
+            names.append(section.getTitle());
+        }
+        TextView summary = row.findViewById(R.id.settingsRowSummary);
+        summary.setText(names);
+        summary.setVisibility(names.length() > 0 ? View.VISIBLE : View.GONE);
+
+        // The icon takes the colour of the category's first section
+        int color = R.color.section_blue;
+        if (!sections.isEmpty()) {
+            int[] icon = SettingsSections.iconOf(sections.get(0).getKey());
+            if (icon != null) {
+                color = icon[1];
+            }
+        }
+        ((ImageView) row.findViewById(R.id.settingsRowIcon)).setImageDrawable(
+                SettingsSections.tinted(context, iconFor(category.getKey()), color));
+        return row;
+    }
+
+    // Phone: the list of categories fills the screen
+    private void showList() {
+        activeItem = null;
+        for (int i = 0; i < container.getChildCount(); i++) {
+            container.getChildAt(i).setActivated(false);
+        }
+        showSections(null);
+        listPane.setVisibility(View.VISIBLE);
+        detailPane.setVisibility(View.GONE);
+        if (backButton != null) {
+            backButton.setVisibility(View.GONE);
+        }
+        if (titleView != null) {
+            titleView.setText(R.string.settings);
+        }
+        if (searchEmpty != null) {
+            searchEmpty.setVisibility(View.GONE);
+        }
+        hideKeyboard();
+    }
+
+    // Phone: the options of one category, or the search results, fill the screen
+    private void showDetail(CharSequence title) {
+        listPane.setVisibility(View.GONE);
+        detailPane.setVisibility(View.VISIBLE);
+        if (backButton != null) {
+            backButton.setVisibility(View.VISIBLE);
+        }
+        if (titleView != null) {
+            titleView.setText(title);
+        }
+    }
+
+    private void hideKeyboard() {
+        if (searchField != null && searchField.hasFocus()) {
+            searchField.clearFocus();
+            InputMethodManager imm = (InputMethodManager)
+                    searchField.getContext().getSystemService(Context.INPUT_METHOD_SERVICE);
+            if (imm != null) {
+                imm.hideSoftInputFromWindow(searchField.getWindowToken(), 0);
+            }
         }
     }
 
@@ -238,6 +367,10 @@ final class SettingsSidebar {
             category.setVisible(category == item.getTag());
         }
         showSections((PreferenceCategory) item.getTag());
+        if (drillDown) {
+            showDetail(((PreferenceCategory) item.getTag()).getTitle());
+            hideKeyboard();
+        }
 
         if (fragment != null && fragment.getListView() != null) {
             fragment.getListView().scrollToPosition(0);
@@ -263,11 +396,24 @@ final class SettingsSidebar {
         }
 
         LayoutInflater inflater = LayoutInflater.from(jumpContainer.getContext());
+        boolean chips = jumpContainer.getOrientation() == LinearLayout.HORIZONTAL;
         for (PreferenceCategory section : jumpSections) {
-            ImageView item = (ImageView) inflater.inflate(R.layout.settings_section_jump_item, jumpContainer, false);
             int[] icon = SettingsSections.iconOf(section.getKey());
-            if (icon != null) {
-                item.setImageDrawable(SettingsSections.tinted(item.getContext(), icon[0], icon[1]));
+            View item;
+            if (chips) {
+                TextView chip = (TextView) inflater.inflate(R.layout.settings_section_chip, jumpContainer, false);
+                chip.setText(section.getTitle());
+                if (icon != null) {
+                    chip.setCompoundDrawablesRelativeWithIntrinsicBounds(
+                            SettingsSections.tinted(chip.getContext(), icon[0], icon[1]), null, null, null);
+                }
+                item = chip;
+            } else {
+                ImageView image = (ImageView) inflater.inflate(R.layout.settings_section_jump_item, jumpContainer, false);
+                if (icon != null) {
+                    image.setImageDrawable(SettingsSections.tinted(image.getContext(), icon[0], icon[1]));
+                }
+                item = image;
             }
             item.setContentDescription(item.getContext().getString(R.string.section_jump_to, section.getTitle()));
             item.setOnClickListener(v -> scrollTo(section));
@@ -343,6 +489,8 @@ final class SettingsSidebar {
             activeItem = null;
             if (previous != null) {
                 select(previous);
+            } else if (drillDown) {
+                showList();
             } else if (container.getChildCount() > 0) {
                 select(container.getChildAt(0));
             }
@@ -363,6 +511,9 @@ final class SettingsSidebar {
         if (searchEmpty != null) {
             searchEmpty.setText(container.getContext().getString(R.string.settings_search_empty, query.trim()));
             searchEmpty.setVisibility(anyMatch ? View.GONE : View.VISIBLE);
+        }
+        if (drillDown) {
+            showDetail(container.getContext().getString(R.string.settings_search_results));
         }
         if (fragment != null && fragment.getListView() != null) {
             fragment.getListView().scrollToPosition(0);

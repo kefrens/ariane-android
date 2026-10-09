@@ -808,6 +808,8 @@
     <string name="game_panel_more_options">More options</string>
     <string name="game_panel_task_manager" translatable="false">Task Mgr</string>
     <string name="settings_search_hint">Search settings</string>
+    <string name="settings_search_results">Search results</string>
+    <string name="settings_back">Back</string>
     <string name="settings_search_empty">No setting matches “%1$s”</string>
     <string name="section_video_quality">Picture quality</string>
     <string name="section_video_quality_summary">What the host sends</string>

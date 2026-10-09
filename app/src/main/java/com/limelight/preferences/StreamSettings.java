@@ -15,6 +15,7 @@ import android.app.Activity;
 import android.os.Handler;
 import android.os.Vibrator;
 
+import androidx.activity.OnBackPressedCallback;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.FileProvider;
@@ -61,6 +62,7 @@ import com.limelight.ui.AmbientBackgroundDrawable;
 import com.limelight.utils.Dialog;
 import com.limelight.utils.FileUriUtils;
 import com.limelight.utils.PerformanceDataTracker;
+import com.limelight.utils.UiClass;
 import com.limelight.utils.UiHelper;
 import org.json.JSONObject;
 import java.io.File;
@@ -73,6 +75,7 @@ import java.util.Map;
 
 public class StreamSettings extends AppCompatActivity {
     private PreferenceConfiguration previousPrefs;
+    private int currentLayoutId;
 
     private static final String STATE_CATEGORY_INDEX = "settings_category_index";
     private static final String STATE_SCROLL_POSITION = "settings_scroll_position";
@@ -115,10 +118,12 @@ public class StreamSettings extends AppCompatActivity {
         }
 
         previousPrefs = PreferenceConfiguration.readPreferences(this);
+        getOnBackPressedDispatcher().addCallback(this, backCallback);
 
         UiHelper.setLocale(this);
 
-        setContentView(R.layout.activity_stream_settings);
+        currentLayoutId = layoutForDevice();
+        setContentView(currentLayoutId);
         AmbientBackgroundDrawable.install(this);
         sidebar = SettingsSidebar.attach(this);
 
@@ -150,9 +155,24 @@ public class StreamSettings extends AppCompatActivity {
         reloadSettings();
     }
 
+    // Phones get the drill-down layout. TVs and tablets keep the two-pane one, which the
+    // w720dp resource qualifier narrows down to a plain list on small windows.
+    private int layoutForDevice() {
+        return UiClass.layoutFor(UiClass.of(this),
+                R.layout.activity_stream_settings,
+                R.layout.activity_stream_settings_phone,
+                R.layout.activity_stream_settings);
+    }
+
     @Override
     public void onConfigurationChanged(Configuration newConfig) {
         super.onConfigurationChanged(newConfig);
+
+        // The window moved to another class of device (a fold, split screen): lay out again
+        if (layoutForDevice() != currentLayoutId) {
+            recreate();
+            return;
+        }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             Display.Mode mode = getActiveDisplay(StreamSettings.this, previousPrefs).getMode();
@@ -169,8 +189,27 @@ public class StreamSettings extends AppCompatActivity {
     }
 
     @Override
-    // NOTE: This will NOT be called on Android 13+ with android:enableOnBackInvokedCallback="true"
+    // NOTE: This will NOT be called on Android 13+ with android:enableOnBackInvokedCallback="true",
+    // where backCallback below takes over
     public void onBackPressed() {
+        // Inside a category or a search, back goes up one step first
+        if (sidebar != null && sidebar.handleBack()) {
+            return;
+        }
+        finishSettings();
+    }
+
+    private final OnBackPressedCallback backCallback = new OnBackPressedCallback(true) {
+        @Override
+        public void handleOnBackPressed() {
+            if (sidebar != null && sidebar.handleBack()) {
+                return;
+            }
+            finishSettings();
+        }
+    };
+
+    private void finishSettings() {
         finish();
 
         // Language changes are handled via configuration changes in Android 13+,
