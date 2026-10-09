@@ -35,6 +35,7 @@ import com.limelight.utils.HelpLauncher;
 import com.limelight.utils.ServerHelper;
 import com.limelight.utils.CacheHelper;
 import com.limelight.utils.ShortcutHelper;
+import com.limelight.utils.UiClass;
 import com.limelight.utils.UiHelper;
 
 import android.app.ActivityManager;
@@ -153,7 +154,9 @@ public class PcView extends AppCompatActivity implements AdapterFragmentCallback
     private final static int PAIR_ID_OTP = 21;
 
     private void initializeViews() {
-        setContentView(R.layout.activity_pc_view);
+        // Phones get a touch layout. TVs and tablets keep the card layout
+        setContentView(UiClass.layoutFor(this, R.layout.activity_pc_view,
+                R.layout.activity_pc_view_phone, R.layout.activity_pc_view));
         AmbientBackgroundDrawable.install(this);
 
         UiHelper.notifyNewRootView(this);
@@ -1058,7 +1061,8 @@ public class PcView extends AppCompatActivity implements AdapterFragmentCallback
 
     @Override
     public int getAdapterFragmentLayoutId() {
-        return R.layout.pc_grid_view;
+        return UiClass.layoutFor(this, R.layout.pc_grid_view,
+                R.layout.pc_grid_view_phone, R.layout.pc_grid_view);
     }
 
     @Override

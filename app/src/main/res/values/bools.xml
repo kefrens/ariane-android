@@ -2,4 +2,8 @@
 <resources>
     <!-- Dark status and navigation bar icons, for light screens (false in values-night) -->
     <bool name="ariane_light_system_bars">true</bool>
+
+    <!-- The floating menu button is on by default on phones, until the stream has its own
+         handle. Tablets and TVs keep it off (values-sw600dp and values-television). -->
+    <bool name="default_enable_floating_button">true</bool>
 </resources>

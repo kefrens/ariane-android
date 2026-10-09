@@ -14,6 +14,7 @@ import com.limelight.R;
 import com.limelight.nvstream.http.ComputerDetails;
 import com.limelight.nvstream.http.PairingManager;
 import com.limelight.preferences.PreferenceConfiguration;
+import com.limelight.utils.UiClass;
 
 import java.util.Collections;
 import java.util.Comparator;
@@ -21,16 +22,18 @@ import java.util.Comparator;
 public class PcGridAdapter extends GenericGridAdapter<PcView.ComputerObject> {
 
     public PcGridAdapter(Context context, PreferenceConfiguration prefs) {
-        super(context, getLayoutIdForPreferences(prefs));
+        super(context, getLayoutIdForDevice(context));
     }
 
-    private static int getLayoutIdForPreferences(PreferenceConfiguration prefs) {
-        return R.layout.pc_grid_item;
+    // A phone gets host rows, the TV and tablet layouts get host cards
+    private static int getLayoutIdForDevice(Context context) {
+        return UiClass.layoutFor(context, R.layout.pc_grid_item,
+                R.layout.pc_grid_item_phone, R.layout.pc_grid_item);
     }
 
     public void updateLayoutWithPreferences(Context context, PreferenceConfiguration prefs) {
         // This will trigger the view to reload with the new layout
-        setLayoutId(getLayoutIdForPreferences(prefs));
+        setLayoutId(getLayoutIdForDevice(context));
     }
 
     public void addComputer(PcView.ComputerObject computer) {
@@ -90,7 +93,10 @@ public class PcGridAdapter extends GenericGridAdapter<PcView.ComputerObject> {
     public View getView(int i, View convertView, ViewGroup viewGroup) {
         if (isAddCard(i)) {
             if (convertView == null) {
-                convertView = LayoutInflater.from(context).inflate(R.layout.pc_add_item, viewGroup, false);
+                convertView = LayoutInflater.from(context).inflate(
+                        UiClass.layoutFor(context, R.layout.pc_add_item,
+                                R.layout.pc_add_item_phone, R.layout.pc_add_item),
+                        viewGroup, false);
             }
             return convertView;
         }
