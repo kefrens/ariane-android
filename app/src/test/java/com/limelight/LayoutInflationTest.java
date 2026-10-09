@@ -24,6 +24,11 @@ public class LayoutInflationTest {
 
     @Test
     public void allLayoutsInflateSuccessfully() throws IllegalAccessException {
+        inflateAllLayouts();
+    }
+
+    /** Inflates every layout with the configuration the calling test runs under. */
+    static void inflateAllLayouts() throws IllegalAccessException {
         Context base = ApplicationProvider.getApplicationContext();
         // Material Components widgets (e.g. ExtendedFloatingActionButton) require a
         // MaterialComponents theme, which also satisfies AppCompat widgets
